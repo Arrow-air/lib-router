@@ -1,5 +1,5 @@
-//! Library Template for Rust.
-//! This is a crate description, needed or else missing_docs warning will occur.
+//! Fleet Routing Algorithm Library.
+//! Handles routing and path-finding tasks.
 
 mod types {
     pub mod location;
