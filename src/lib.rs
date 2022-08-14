@@ -1,6 +1,12 @@
 //! Library Template for Rust.
 //! This is a crate description, needed or else missing_docs warning will occur.
 
+mod types {
+    pub mod location;
+    pub mod node;
+    pub mod status;
+}
+
 /// Adds one to a number.
 ///
 /// # Arguments
