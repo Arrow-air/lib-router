@@ -1,6 +1,12 @@
 //! Fleet Routing Algorithm Library.
 //! Handles routing and path-finding tasks.
 
+mod types {
+    pub mod location;
+    pub mod node;
+    pub mod status;
+}
+
 /// Adds one to a number.
 ///
 /// # Arguments
