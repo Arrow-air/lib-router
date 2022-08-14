@@ -1,5 +1,5 @@
 [package]
-name = "lib_template_rust"
+name = "lib_router"
 version = "0.1.0"
 edition = "2021" # Allowed values are 2015, 2018, 2021
 # Rust Editions: https://doc.rust-lang.org/edition-guide/index.html
@@ -15,5 +15,5 @@ default-features = false # Disable features which are enabled by default
 features = ["user-hooks"]
 
 [lib]
-name = "lib_template_rust"
+name = "lib_router"
 path = "src/lib.rs"
