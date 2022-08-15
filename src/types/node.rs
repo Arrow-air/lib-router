@@ -22,6 +22,7 @@ use super::status;
 pub trait AsNode {
     /// Returns the generic `Node` struct that an object "extends".
     fn as_node(&self) -> &Node;
+    fn get_uid(&self) -> String;
 }
 
 //------------------------------------------------------------------
@@ -63,7 +64,7 @@ pub struct Node {
 
 /// A vertipad allows for take-offs and landings of a single aircraft.
 #[derive(Debug)]
-pub struct Vertipad {
+pub struct Vertipad<'a> {
     pub node: Node,
 
     /// FAA regulated pad size.
@@ -72,32 +73,56 @@ pub struct Vertipad {
     /// Certain pads may have special purposes. For example, a pad may
     /// be used for medical emergency services.
     ///
-    /// TODO: Define an enum for possible permissions.
+    /// TODO: Define a struct for permissions.
     pub permissions: Vec<String>,
 
     /// If there's no vertiport, then the vertipad itself is the vertiport.
-    pub owner_port: Option<Vertiport>,
-
-    /// The toll for parking at this vertipad. 0 if no toll.
-    pub charge_rate: f32,
+    pub owner_port: Option<Vertiport<'a>>,
 }
 
-impl AsNode for Vertipad {
+impl Vertipad<'_> {
+    /// Updates the size_square_meters field of a vertipad.
+    ///
+    /// CAUTION: Testing purposes only. Updates should not be done from
+    /// the router lib.
+    #[allow(dead_code)]
+    fn update_size_square_meters(&mut self, new_size: f32) {
+        self.size_square_meters = new_size;
+    }
+}
+
+impl AsNode for Vertipad<'_> {
     fn as_node(&self) -> &Node {
         &self.node
+    }
+
+    fn get_uid(&self) -> String {
+        self.as_node().uid.clone()
     }
 }
 
 /// A vertiport that has a collection of vertipads.
 #[derive(Debug)]
-pub struct Vertiport {
+pub struct Vertiport<'a> {
     pub node: Node,
-    pub vertipads: Vec<Vertipad>,
+    pub vertipads: Vec<&'a Vertipad<'a>>,
 }
 
-impl AsNode for Vertiport {
+impl<'a> Vertiport<'a> {
+    /// Adds a vertipad to the vertiport.
+    #[allow(dead_code)]
+    pub fn add_vertipad(&mut self, vertipad: &'a Vertipad) {
+        self.vertipads.push(vertipad);
+    }
+}
+
+impl AsNode for Vertiport<'_> {
     fn as_node(&self) -> &Node {
         &self.node
+    }
+
+    fn get_uid(&self) -> String {
+        self.as_node().uid.clone()
     }
 }
 
@@ -111,8 +136,104 @@ impl AsNode for Vertiport {
 mod node_type_tests {
     use super::*;
 
-    fn get_generic_node_id_from(object: impl AsNode) -> String {
-        return object.as_node().uid.clone();
+    /// Tests that we can make modifications.
+    #[test]
+    fn test_mutability() {
+        let mut vertipad_1 = Vertipad {
+            node: Node {
+                uid: "vertipad_1".to_string(),
+                location: location::Location {
+                    longitude: -73.935242,
+                    latitude: 40.730610,
+                    altitude_meters: 0.0,
+                },
+                forward_to: None,
+                status: status::Status::Ok,
+            },
+            size_square_meters: 100.0,
+            permissions: vec!["medical".to_string()],
+            owner_port: None,
+        };
+        let vertipad_2 = Vertipad {
+            node: Node {
+                uid: "vertipad_2".to_string(),
+                location: location::Location {
+                    longitude: -73.935242,
+                    latitude: 40.730610,
+                    altitude_meters: 0.0,
+                },
+                forward_to: None,
+                status: status::Status::Ok,
+            },
+            size_square_meters: 100.0,
+            permissions: vec!["medical".to_string()],
+            owner_port: None,
+        };
+        let vertipad_3 = Vertipad {
+            node: Node {
+                uid: "vertipad_3".to_string(),
+                location: location::Location {
+                    longitude: -73.935242,
+                    latitude: 40.730610,
+                    altitude_meters: 0.0,
+                },
+                forward_to: None,
+                status: status::Status::Ok,
+            },
+            size_square_meters: 100.0,
+            permissions: vec!["medical".to_string()],
+            owner_port: None,
+        };
+        let mut vertiport = Vertiport {
+            node: Node {
+                uid: "vertiport_1".to_string(),
+                location: location::Location {
+                    longitude: -73.935242,
+                    latitude: 40.730610,
+                    altitude_meters: 0.0,
+                },
+                forward_to: None,
+                status: status::Status::Ok,
+            },
+            vertipads: vec![],
+        };
+
+        let vertipad_4 = Vertipad {
+            node: Node {
+                uid: "vertipad_4".to_string(),
+                location: location::Location {
+                    longitude: -73.935242,
+                    latitude: 40.730610,
+                    altitude_meters: 0.0,
+                },
+                forward_to: None,
+                status: status::Status::Ok,
+            },
+            size_square_meters: 100.0,
+            permissions: vec!["medical".to_string()],
+            owner_port: None,
+        };
+        // add all vertipads to the vertiport.
+        vertiport.add_vertipad(&vertipad_1);
+        vertiport.add_vertipad(&vertipad_2);
+        vertiport.add_vertipad(&vertipad_3);
+        vertiport.add_vertipad(&vertipad_4);
+
+        // check that the vertiport has all vertipads.
+        assert_eq!(vertiport.vertipads.len(), 4);
+
+        // print the uid of each vertipad in the vertiport.
+        assert_eq!(vertiport.vertipads[0].node.uid, "vertipad_1".to_string());
+        assert_eq!(vertiport.vertipads[1].node.uid, "vertipad_2".to_string());
+        assert_eq!(vertiport.vertipads[2].node.uid, "vertipad_3".to_string());
+        assert_eq!(vertiport.vertipads[3].node.uid, "vertipad_4".to_string());
+
+        let new_pad_size = 200.0;
+        // update the size of vertipad_1.
+        vertipad_1.update_size_square_meters(new_pad_size.clone());
+
+        // check that the size of vertipad_1 has been updated.
+        assert_eq!(vertipad_1.size_square_meters, new_pad_size);
     }
 
     #[test]
@@ -131,8 +252,7 @@ mod node_type_tests {
             size_square_meters: 100.0,
             permissions: vec!["public".to_string()],
             owner_port: None,
-            charge_rate: 0.0,
         };
-        assert_eq!(get_generic_node_id_from(vertipad), "vertipad_1");
+        assert_eq!(vertipad.get_uid(), "vertipad_1");
     }
 }
