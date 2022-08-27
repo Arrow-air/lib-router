@@ -17,13 +17,21 @@ use ordered_float::OrderedFloat;
 
 use super::location;
 use super::status;
+use crate::utils::haversine;
+use core::hash::Hash;
 
 /// Since Rust doesn't allow for inheritance, we need to use `trait` as
 /// a hack to allow passing "Node-like" objects to functions.
 pub trait AsNode {
     /// Returns the generic `Node` struct that an object "extends".
     fn as_node(&self) -> &Node;
+
+    /// Returns the identifier of the node.
     fn get_uid(&self) -> String;
+
+    /// Returns the distance between two nodes using the Haversine
+    /// formula.
+    fn distance_to(&self, other: &dyn AsNode) -> OrderedFloat<f32>;
 }
 
 //------------------------------------------------------------------
@@ -63,6 +71,18 @@ pub struct Node {
     pub status: status::Status,
 }
 
+impl AsNode for Node {
+    fn as_node(&self) -> &Node {
+        self
+    }
+    fn get_uid(&self) -> String {
+        self.uid.clone()
+    }
+    fn distance_to(&self, other: &dyn AsNode) -> OrderedFloat<f32> {
+        haversine::distance(&self.location, &other.as_node().location).into()
+    }
+}
+
 /// A vertipad allows for take-offs and landings of a single aircraft.
 #[derive(Debug)]
 pub struct Vertipad<'a> {
@@ -100,6 +120,10 @@ impl AsNode for Vertipad<'_> {
     fn get_uid(&self) -> String {
         self.as_node().uid.clone()
     }
+
+    fn distance_to(&self, other: &dyn AsNode) -> OrderedFloat<f32> {
+        haversine::distance(&self.as_node().location, &other.as_node().location).into()
+    }
 }
 
 /// A vertiport that has a collection of vertipads.
@@ -124,6 +148,10 @@ impl AsNode for Vertiport<'_> {
 
     fn get_uid(&self) -> String {
         self.as_node().uid.clone()
+    }
+
+    fn distance_to(&self, other: &dyn AsNode) -> OrderedFloat<f32> {
+        haversine::distance(&self.as_node().location, &other.as_node().location).into()
     }
 }
 
@@ -255,5 +283,54 @@ mod node_type_tests {
             owner_port: None,
         };
         assert_eq!(vertipad.get_uid(), "vertipad_1");
+    }
+
+    #[test]
+    fn test_distance_to() {
+        let vertipad_1 = Vertipad {
+            node: Node {
+                uid: "vertipad_1".to_string(),
+                location: location::Location {
+                    longitude: OrderedFloat(-73.935242),
+                    latitude: OrderedFloat(40.730610),
+                    altitude_meters: OrderedFloat(0.0),
+                },
+                forward_to: None,
+                status: status::Status::Ok,
+            },
+            size_square_meters: OrderedFloat(100.0),
+            permissions: vec!["public".to_string()],
+            owner_port: None,
+        };
+        let vertipad_2 = Vertipad {
+            node: Node {
+                uid: "vertipad_2".to_string(),
+                location: location::Location {
+                    longitude: OrderedFloat(-33.935242),
+                    latitude: OrderedFloat(40.730610),
+                    altitude_meters: OrderedFloat(0.0),
+                },
+                forward_to: None,
+                status: status::Status::Ok,
+            },
+            size_square_meters: OrderedFloat(100.0),
+            permissions: vec!["public".to_string()],
+            owner_port: None,
+        };
+        let vertiport = Vertiport {
+            node: Node {
+                uid: "vertiport_1".to_string(),
+                location: location::Location {
+                    longitude: OrderedFloat(-73.935242),
+                    latitude: OrderedFloat(40.730610),
+                    altitude_meters: 0.0.into(),
+                },
+                forward_to: None,
+                status: status::Status::Ok,
+            },
+            vertipads: vec![],
+        };
+        assert_eq!(vertiport.distance_to(&vertipad_1), 0.0);
+        assert_eq!(vertiport.distance_to(&vertipad_2), 3340.5833);
     }
 }
