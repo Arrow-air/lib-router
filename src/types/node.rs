@@ -18,7 +18,10 @@ use ordered_float::OrderedFloat;
 use super::location;
 use super::status;
 use crate::utils::haversine;
+<<<<<<< refs/remotes/origin/develop
 use core::hash::Hash;
+=======
+>>>>>>> Implement the haversine formula to compute distances
 
 /// Since Rust doesn't allow for inheritance, we need to use `trait` as
 /// a hack to allow passing "Node-like" objects to functions.
@@ -28,10 +31,14 @@ pub trait AsNode {
 
     /// Returns the identifier of the node.
     fn get_uid(&self) -> String;
+<<<<<<< refs/remotes/origin/develop
 
     /// Returns the distance between two nodes using the Haversine
     /// formula.
     fn distance_to(&self, other: &dyn AsNode) -> OrderedFloat<f32>;
+=======
+    fn distance_to(&self, other: &dyn AsNode) -> f32;
+>>>>>>> Implement the haversine formula to compute distances
 }
 
 //------------------------------------------------------------------
@@ -121,8 +128,13 @@ impl AsNode for Vertipad<'_> {
         self.as_node().uid.clone()
     }
 
+<<<<<<< refs/remotes/origin/develop
     fn distance_to(&self, other: &dyn AsNode) -> OrderedFloat<f32> {
         haversine::distance(&self.as_node().location, &other.as_node().location).into()
+=======
+    fn distance_to(&self, other: &dyn AsNode) -> f32 {
+        haversine::distance(&self.as_node().location, &other.as_node().location)
+>>>>>>> Implement the haversine formula to compute distances
     }
 }
 
@@ -150,8 +162,13 @@ impl AsNode for Vertiport<'_> {
         self.as_node().uid.clone()
     }
 
+<<<<<<< refs/remotes/origin/develop
     fn distance_to(&self, other: &dyn AsNode) -> OrderedFloat<f32> {
         haversine::distance(&self.as_node().location, &other.as_node().location).into()
+=======
+    fn distance_to(&self, other: &dyn AsNode) -> f32 {
+        haversine::distance(&self.as_node().location, &other.as_node().location)
+>>>>>>> Implement the haversine formula to compute distances
     }
 }
 
