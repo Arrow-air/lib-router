@@ -7,6 +7,10 @@ mod types {
     pub mod status;
 }
 
+mod utils {
+    pub mod haversine;
+}
+
 /// Adds one to a number.
 ///
 /// # Arguments
