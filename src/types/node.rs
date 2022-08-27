@@ -19,9 +19,13 @@ use super::location;
 use super::status;
 use crate::utils::haversine;
 <<<<<<< refs/remotes/origin/develop
+<<<<<<< refs/remotes/origin/develop
 use core::hash::Hash;
 =======
 >>>>>>> Implement the haversine formula to compute distances
+=======
+use core::hash::Hash;
+>>>>>>> Add doc comments and AsNode impl for Node
 
 /// Since Rust doesn't allow for inheritance, we need to use `trait` as
 /// a hack to allow passing "Node-like" objects to functions.
@@ -32,11 +36,17 @@ pub trait AsNode {
     /// Returns the identifier of the node.
     fn get_uid(&self) -> String;
 <<<<<<< refs/remotes/origin/develop
+<<<<<<< refs/remotes/origin/develop
 
     /// Returns the distance between two nodes using the Haversine
     /// formula.
     fn distance_to(&self, other: &dyn AsNode) -> OrderedFloat<f32>;
 =======
+=======
+
+    /// Returns the distance between two nodes using the Haversine
+    /// formula.
+>>>>>>> Add doc comments and AsNode impl for Node
     fn distance_to(&self, other: &dyn AsNode) -> f32;
 >>>>>>> Implement the haversine formula to compute distances
 }
@@ -85,8 +95,13 @@ impl AsNode for Node {
     fn get_uid(&self) -> String {
         self.uid.clone()
     }
+<<<<<<< refs/remotes/origin/develop
     fn distance_to(&self, other: &dyn AsNode) -> OrderedFloat<f32> {
         haversine::distance(&self.location, &other.as_node().location).into()
+=======
+    fn distance_to(&self, other: &dyn AsNode) -> f32 {
+        haversine::distance(&self.location, &other.as_node().location)
+>>>>>>> Add doc comments and AsNode impl for Node
     }
 }
 
