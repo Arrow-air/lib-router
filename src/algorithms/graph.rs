@@ -34,7 +34,7 @@ impl<'a> Graph<'a> {
     ///   returns a float to compare against `constraint`.
     ///
     /// # Time Complexity
-    /// *O*(*n^2*) at worst if the constraint is met for all nodes.
+    /// *O*(*n^2*) at worst if the constraint is not met for all nodes.
     ///
     /// # Returns
     /// A new graph.
