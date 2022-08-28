@@ -7,6 +7,10 @@ mod types {
     pub mod status;
 }
 
+mod algorithms {
+    pub mod graph;
+}
+
 mod utils {
     pub mod haversine;
 }
