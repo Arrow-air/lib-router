@@ -11,6 +11,10 @@ mod utils {
     pub mod haversine;
 }
 
+mod algorithms {
+    pub mod graph;
+}
+
 /// Adds one to a number.
 ///
 /// # Arguments
