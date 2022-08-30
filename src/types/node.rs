@@ -13,16 +13,25 @@
 //!
 //! This pattern allows functions to be agnostic of the type of `Node` to
 //! accept as argument.
+use ordered_float::OrderedFloat;
 
 use super::location;
 use super::status;
+use crate::utils::haversine;
+use core::hash::Hash;
 
 /// Since Rust doesn't allow for inheritance, we need to use `trait` as
 /// a hack to allow passing "Node-like" objects to functions.
 pub trait AsNode {
     /// Returns the generic `Node` struct that an object "extends".
     fn as_node(&self) -> &Node;
+
+    /// Returns the identifier of the node.
     fn get_uid(&self) -> String;
+
+    /// Returns the distance between two nodes using the Haversine
+    /// formula.
+    fn distance_to(&self, other: &dyn AsNode) -> OrderedFloat<f32>;
 }
 
 //------------------------------------------------------------------
@@ -33,7 +42,7 @@ pub trait AsNode {
 ///
 /// Since the actual vertex can be any object, a generic struct is
 /// needed for the purpose of abstraction and clarity.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Hash, Eq)]
 pub struct Node {
     /// Typed as a [`String`] to allow for synthetic ids. One purpose of
     /// using a synthetic id is to allow for partitioned indexing on the
@@ -62,13 +71,25 @@ pub struct Node {
     pub status: status::Status,
 }
 
+impl AsNode for Node {
+    fn as_node(&self) -> &Node {
+        self
+    }
+    fn get_uid(&self) -> String {
+        self.uid.clone()
+    }
+    fn distance_to(&self, other: &dyn AsNode) -> OrderedFloat<f32> {
+        haversine::distance(&self.location, &other.as_node().location).into()
+    }
+}
+
 /// A vertipad allows for take-offs and landings of a single aircraft.
 #[derive(Debug)]
 pub struct Vertipad<'a> {
     pub node: Node,
 
     /// FAA regulated pad size.
-    pub size_square_meters: f32,
+    pub size_square_meters: OrderedFloat<f32>,
 
     /// Certain pads may have special purposes. For example, a pad may
     /// be used for medical emergency services.
@@ -86,7 +107,7 @@ impl Vertipad<'_> {
     /// CAUTION: Testing purposes only. Updates should not be done from
     /// the router lib.
     #[allow(dead_code)]
-    fn update_size_square_meters(&mut self, new_size: f32) {
+    fn update_size_square_meters(&mut self, new_size: OrderedFloat<f32>) {
         self.size_square_meters = new_size;
     }
 }
@@ -98,6 +119,10 @@ impl AsNode for Vertipad<'_> {
 
     fn get_uid(&self) -> String {
         self.as_node().uid.clone()
+    }
+
+    fn distance_to(&self, other: &dyn AsNode) -> OrderedFloat<f32> {
+        haversine::distance(&self.as_node().location, &other.as_node().location).into()
     }
 }
 
@@ -124,6 +149,10 @@ impl AsNode for Vertiport<'_> {
     fn get_uid(&self) -> String {
         self.as_node().uid.clone()
     }
+
+    fn distance_to(&self, other: &dyn AsNode) -> OrderedFloat<f32> {
+        haversine::distance(&self.as_node().location, &other.as_node().location).into()
+    }
 }
 
 //------------------------------------------------------------------
@@ -143,14 +172,14 @@ mod node_type_tests {
             node: Node {
                 uid: "vertipad_1".to_string(),
                 location: location::Location {
-                    longitude: -73.935242,
-                    latitude: 40.730610,
-                    altitude_meters: 0.0,
+                    longitude: OrderedFloat(-73.935242),
+                    latitude: OrderedFloat(40.730610),
+                    altitude_meters: OrderedFloat(0.0),
                 },
                 forward_to: None,
                 status: status::Status::Ok,
             },
-            size_square_meters: 100.0,
+            size_square_meters: OrderedFloat(100.0),
             permissions: vec!["medical".to_string()],
             owner_port: None,
         };
@@ -158,14 +187,14 @@ mod node_type_tests {
             node: Node {
                 uid: "vertipad_2".to_string(),
                 location: location::Location {
-                    longitude: -73.935242,
-                    latitude: 40.730610,
-                    altitude_meters: 0.0,
+                    longitude: OrderedFloat(-73.935242),
+                    latitude: OrderedFloat(40.730610),
+                    altitude_meters: OrderedFloat(0.0),
                 },
                 forward_to: None,
                 status: status::Status::Ok,
             },
-            size_square_meters: 100.0,
+            size_square_meters: OrderedFloat(100.0),
             permissions: vec!["medical".to_string()],
             owner_port: None,
         };
@@ -173,14 +202,14 @@ mod node_type_tests {
             node: Node {
                 uid: "vertipad_3".to_string(),
                 location: location::Location {
-                    longitude: -73.935242,
-                    latitude: 40.730610,
-                    altitude_meters: 0.0,
+                    longitude: OrderedFloat(-73.935242),
+                    latitude: OrderedFloat(40.730610),
+                    altitude_meters: OrderedFloat(0.0),
                 },
                 forward_to: None,
                 status: status::Status::Ok,
             },
-            size_square_meters: 100.0,
+            size_square_meters: OrderedFloat(100.0),
             permissions: vec!["medical".to_string()],
             owner_port: None,
         };
@@ -188,9 +217,9 @@ mod node_type_tests {
             node: Node {
                 uid: "vertiport_1".to_string(),
                 location: location::Location {
-                    longitude: -73.935242,
-                    latitude: 40.730610,
-                    altitude_meters: 0.0,
+                    longitude: OrderedFloat(-73.935242),
+                    latitude: OrderedFloat(40.730610),
+                    altitude_meters: 0.0.into(),
                 },
                 forward_to: None,
                 status: status::Status::Ok,
@@ -202,14 +231,14 @@ mod node_type_tests {
             node: Node {
                 uid: "vertipad_4".to_string(),
                 location: location::Location {
-                    longitude: -73.935242,
-                    latitude: 40.730610,
-                    altitude_meters: 0.0,
+                    longitude: OrderedFloat(-73.935242),
+                    latitude: OrderedFloat(40.730610),
+                    altitude_meters: 0.0.into(),
                 },
                 forward_to: None,
                 status: status::Status::Ok,
             },
-            size_square_meters: 100.0,
+            size_square_meters: OrderedFloat(100.0),
             permissions: vec!["medical".to_string()],
             owner_port: None,
         };
@@ -230,7 +259,7 @@ mod node_type_tests {
 
         let new_pad_size = 200.0;
         // update the size of vertipad_1.
-        vertipad_1.update_size_square_meters(new_pad_size.clone());
+        vertipad_1.update_size_square_meters(new_pad_size.into());
 
         // check that the size of vertipad_1 has been updated.
         assert_eq!(vertipad_1.size_square_meters, new_pad_size);
@@ -242,17 +271,66 @@ mod node_type_tests {
             node: Node {
                 uid: "vertipad_1".to_string(),
                 location: location::Location {
-                    longitude: -73.935242,
-                    latitude: 40.730610,
-                    altitude_meters: 0.0,
+                    longitude: OrderedFloat(-73.935242),
+                    latitude: OrderedFloat(40.730610),
+                    altitude_meters: OrderedFloat(0.0),
                 },
                 forward_to: None,
                 status: status::Status::Ok,
             },
-            size_square_meters: 100.0,
+            size_square_meters: OrderedFloat(100.0),
             permissions: vec!["public".to_string()],
             owner_port: None,
         };
         assert_eq!(vertipad.get_uid(), "vertipad_1");
+    }
+
+    #[test]
+    fn test_distance_to() {
+        let vertipad_1 = Vertipad {
+            node: Node {
+                uid: "vertipad_1".to_string(),
+                location: location::Location {
+                    longitude: OrderedFloat(-73.935242),
+                    latitude: OrderedFloat(40.730610),
+                    altitude_meters: OrderedFloat(0.0),
+                },
+                forward_to: None,
+                status: status::Status::Ok,
+            },
+            size_square_meters: OrderedFloat(100.0),
+            permissions: vec!["public".to_string()],
+            owner_port: None,
+        };
+        let vertipad_2 = Vertipad {
+            node: Node {
+                uid: "vertipad_2".to_string(),
+                location: location::Location {
+                    longitude: OrderedFloat(-33.935242),
+                    latitude: OrderedFloat(40.730610),
+                    altitude_meters: OrderedFloat(0.0),
+                },
+                forward_to: None,
+                status: status::Status::Ok,
+            },
+            size_square_meters: OrderedFloat(100.0),
+            permissions: vec!["public".to_string()],
+            owner_port: None,
+        };
+        let vertiport = Vertiport {
+            node: Node {
+                uid: "vertiport_1".to_string(),
+                location: location::Location {
+                    longitude: OrderedFloat(-73.935242),
+                    latitude: OrderedFloat(40.730610),
+                    altitude_meters: 0.0.into(),
+                },
+                forward_to: None,
+                status: status::Status::Ok,
+            },
+            vertipads: vec![],
+        };
+        assert_eq!(vertiport.distance_to(&vertipad_1), 0.0);
+        assert_eq!(vertiport.distance_to(&vertipad_2), 3340.5833);
     }
 }
