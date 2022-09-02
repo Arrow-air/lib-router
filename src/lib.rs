@@ -9,6 +9,7 @@ mod types {
 
 mod utils {
     pub mod generator;
+    pub mod graph;
     pub mod haversine;
 }
 
