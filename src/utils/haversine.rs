@@ -8,7 +8,7 @@
 
 use crate::types::location::Location;
 
-/// Calculates the distance between two points on a sphere.
+/// Calculate the distance between two points on a sphere.
 ///
 /// # Arguments
 /// * `from` - The starting point.
