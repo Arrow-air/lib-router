@@ -14,9 +14,14 @@ use ordered_float::OrderedFloat;
 ///
 /// Float values are used to achieve a 5-decimal precision (0.00001),
 /// which narrows the error margin to a meter.
-#[derive(Debug, PartialEq, Hash, Eq)]
+#[derive(Debug, PartialEq, Hash, Eq, Copy, Clone)]
 pub struct Location {
-    pub longitude: OrderedFloat<f32>,
+    /// The latitude of the location.
     pub latitude: OrderedFloat<f32>,
+
+    /// The longitude of the location.
+    pub longitude: OrderedFloat<f32>,
+
+    /// The altitude of the location in meters.
     pub altitude_meters: OrderedFloat<f32>,
 }
