@@ -55,7 +55,7 @@ pub struct Node {
     /// that is expensive enough to impact the user experience.
     pub uid: String,
 
-    /// Denotes the geographical position of the node.
+    /// Denote the geographical position of the node.
     ///
     /// See also [`Location`].
     pub location: location::Location,
@@ -65,7 +65,7 @@ pub struct Node {
     /// node.
     pub forward_to: Option<Box<Node>>,
 
-    /// Indicates the operation status of a node.
+    /// Indicate the operation status of a node.
     ///
     /// See also [`Status`](Status::Status).
     pub status: status::Status,
@@ -86,6 +86,7 @@ impl AsNode for Node {
 /// A vertipad allows for take-offs and landings of a single aircraft.
 #[derive(Debug)]
 pub struct Vertipad<'a> {
+    /// The generic node that this vertipad extends.
     pub node: Node,
 
     /// FAA regulated pad size.
@@ -102,7 +103,7 @@ pub struct Vertipad<'a> {
 }
 
 impl Vertipad<'_> {
-    /// Updates the size_square_meters field of a vertipad.
+    /// Update the size_square_meters field of a vertipad.
     ///
     /// CAUTION: Testing purposes only. Updates should not be done from
     /// the router lib.
@@ -129,7 +130,10 @@ impl AsNode for Vertipad<'_> {
 /// A vertiport that has a collection of vertipads.
 #[derive(Debug)]
 pub struct Vertiport<'a> {
+    /// The generic node that this vertiport extends.
     pub node: Node,
+
+    /// A vertiport may have multiple vertipads.
     pub vertipads: Vec<&'a Vertipad<'a>>,
 }
 
