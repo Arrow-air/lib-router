@@ -14,14 +14,3 @@ mod utils {
 
 pub use types::*;
 pub use utils::*;
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn ut_add_one() {
-        let val: u8 = 1;
-        assert_eq!(val + 1, add_one(val));
-    }
-}
