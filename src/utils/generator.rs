@@ -1,5 +1,7 @@
 //! A number of methods to generate random data for testing.
 
+use std::collections::HashSet;
+
 use crate::types::{location::Location, node::Node, status};
 use ordered_float::OrderedFloat;
 use quaternion::Quaternion;
@@ -22,8 +24,16 @@ const RAD_TO_DEG: f32 = 180.0 / std::f32::consts::PI;
 /// A vector of nodes.
 pub fn generate_nodes(capacity: i32) -> Vec<Node> {
     let mut nodes = Vec::new();
+    let mut uuid_set = HashSet::<String>::new();
     for _ in 0..capacity {
-        nodes.push(generate_random_node());
+        loop {
+            let node = generate_random_node();
+            if !uuid_set.contains(&node.uid) {
+                uuid_set.insert(node.uid.clone());
+                nodes.push(node);
+                break;
+            }
+        }
     }
     nodes
 }
@@ -39,13 +49,26 @@ pub fn generate_nodes(capacity: i32) -> Vec<Node> {
 /// A vector of nodes.
 pub fn generate_nodes_near(location: &Location, radius: f32, capacity: i32) -> Vec<Node> {
     let mut nodes = Vec::new();
+    let mut uuid_set = HashSet::<String>::new();
     for _ in 0..capacity {
-        nodes.push(generate_random_node_near(location, radius));
+        loop {
+            let node = generate_random_node_near(location, radius);
+            if !uuid_set.contains(&node.uid) {
+                uuid_set.insert(node.uid.clone());
+                nodes.push(node);
+                break;
+            }
+        }
     }
     nodes
 }
 
 /// Generate a single random node.
+///
+///
+/// # Caution
+/// Note that the UUID generation does not guarantee uniqueness. Please
+/// make sure to check for potential duplicates, albeit very unlikely.
 pub fn generate_random_node() -> Node {
     Node {
         uid: Uuid::new_v4().to_string(),
@@ -63,6 +86,10 @@ pub fn generate_random_node() -> Node {
 ///
 /// # Returns
 /// A node with a location near the given location.
+///
+/// # Caution
+/// Note that the UUID generation does not guarantee uniqueness. Please
+/// make sure to check for potential duplicates, albeit very unlikely.
 pub fn generate_random_node_near(location: &Location, radius: f32) -> Node {
     Node {
         uid: Uuid::new_v4().to_string(),
