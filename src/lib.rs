@@ -8,18 +8,12 @@ mod types {
 }
 
 mod utils {
+    pub mod generator;
     pub mod haversine;
 }
 
-/// Adds one to a number.
-///
-/// # Arguments
-///
-/// * `val` - Any U8 number.
-///
-pub fn add_one(val: u8) -> u8 {
-    val + 1
-}
+pub use types::*;
+pub use utils::*;
 
 #[cfg(test)]
 mod tests {
