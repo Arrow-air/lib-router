@@ -47,3 +47,30 @@ pub fn build_edges(
     }
     edges
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        generator::{generate_location, generate_nodes_near},
+        haversine,
+    };
+
+    use super::*;
+
+    #[test]
+    fn test_build_edges() {
+        let capacity = 1000;
+        let location = generate_location();
+        let nodes = generate_nodes_near(&location, 1000.0, capacity);
+
+        // set constraint to 2000 so that all nodes should be connected
+        let edges = build_edges(
+            &nodes,
+            2000.0,
+            |from, to| haversine::distance(&from.as_node().location, &to.as_node().location),
+            |from, to| haversine::distance(&from.as_node().location, &to.as_node().location),
+        );
+
+        assert_eq!(edges.len(), nodes.len() * nodes.len() - capacity as usize);
+    }
+}
