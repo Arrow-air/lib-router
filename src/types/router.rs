@@ -21,7 +21,7 @@ pub mod engine {
     #[derive(Debug)]
     pub struct Router<'a> {
         graph: StableDiGraph<&'a Node, OrderedFloat<f32>>,
-        node_indeces: HashMap<&'a Node, NodeIndex>,
+        node_indices: HashMap<&'a Node, NodeIndex>,
     }
 
     /// Path finding algorithms.
@@ -45,15 +45,15 @@ pub mod engine {
             println!("[2/4] Building edges...");
 
             let edges = build_edges(nodes, constraint, constraint_function, cost_function);
-            let mut node_indeces = HashMap::new();
+            let mut node_indices = HashMap::new();
             let mut graph = StableDiGraph::new();
 
             println!("[3/4] Building the graph...");
             for edge in edges {
-                let from_index = *node_indeces
+                let from_index = *node_indices
                     .entry(edge.0)
                     .or_insert_with(|| graph.add_node(edge.0));
-                let to_index = *node_indeces
+                let to_index = *node_indices
                     .entry(edge.1)
                     .or_insert_with(|| graph.add_node(edge.1));
                 graph.add_edge(from_index, to_index, edge.2);
@@ -61,23 +61,23 @@ pub mod engine {
 
             println!("[4/4] Finalizing the router setup...");
             for node in nodes {
-                if !node_indeces.contains_key(node.as_node()) {
+                if !node_indices.contains_key(node.as_node()) {
                     let index = graph.add_node(node.as_node());
-                    node_indeces.insert(node.as_node(), index);
+                    node_indices.insert(node.as_node(), index);
                 }
             }
 
             println!("✨Done! Router engine is ready to use.");
             Router {
                 graph,
-                node_indeces,
+                node_indices,
             }
         }
 
         /// Get the NodeIndex struct for a given node. The NodeIndex
         /// struct is used to reference things in the graph.
         pub fn get_node_index(&self, node: &Node) -> Option<NodeIndex> {
-            self.node_indeces.get(node).cloned()
+            self.node_indices.get(node).cloned()
         }
 
         /// Return the number of edges in the graph.
