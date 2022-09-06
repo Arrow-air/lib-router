@@ -51,12 +51,12 @@ pub mod engine {
             println!("[3/4] Building the graph...");
             for edge in edges {
                 let from_index = *node_indices
-                    .entry(edge.0)
-                    .or_insert_with(|| graph.add_node(edge.0));
+                    .entry(edge.from)
+                    .or_insert_with(|| graph.add_node(edge.from));
                 let to_index = *node_indices
-                    .entry(edge.1)
-                    .or_insert_with(|| graph.add_node(edge.1));
-                graph.add_edge(from_index, to_index, edge.2);
+                    .entry(edge.to)
+                    .or_insert_with(|| graph.add_node(edge.to));
+                graph.add_edge(from_index, to_index, edge.cost);
             }
 
             println!("[4/4] Finalizing the router setup...");
