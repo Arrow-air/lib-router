@@ -12,6 +12,7 @@ pub mod engine {
     use petgraph::{algo::astar, graph::NodeIndex, stable_graph::StableDiGraph};
 
     use crate::{
+        edge::Edge,
         types::node::{AsNode, Node},
         utils::graph::build_edges,
     };
@@ -22,6 +23,7 @@ pub mod engine {
     pub struct Router<'a> {
         graph: StableDiGraph<&'a Node, OrderedFloat<f32>>,
         node_indices: HashMap<&'a Node, NodeIndex>,
+        edges: Vec<Edge<'a>>,
     }
 
     /// Path finding algorithms.
@@ -49,7 +51,7 @@ pub mod engine {
             let mut graph = StableDiGraph::new();
 
             println!("[3/4] Building the graph...");
-            for edge in edges {
+            for edge in &edges {
                 let from_index = *node_indices
                     .entry(edge.from)
                     .or_insert_with(|| graph.add_node(edge.from));
@@ -71,6 +73,7 @@ pub mod engine {
             Router {
                 graph,
                 node_indices,
+                edges,
             }
         }
 
@@ -145,6 +148,11 @@ pub mod engine {
         pub fn get_node_count(&self) -> usize {
             self.graph.node_count()
         }
+
+        /// Get all the edges in the graph.
+        pub fn get_edges<'a>(&self) -> &'a Vec<Edge> {
+            &self.edges
+        }
     }
 }
 
@@ -152,7 +160,7 @@ pub mod engine {
 mod router_tests {
     use crate::{
         location::Location,
-        node::Node,
+        node::{AsNode, Node},
         router::engine::Algorithm,
         types::router::engine::Router,
         utils::{generator::generate_nodes_near, haversine},
@@ -441,5 +449,64 @@ mod router_tests {
 
         assert_eq!(cost, -1.0);
         assert_eq!(path.len(), 0);
+    }
+
+    /// Test get_edges
+    #[test]
+    fn test_get_edges() {
+        let nodes = vec![
+            Node {
+                uid: "1".to_string(),
+                location: Location {
+                    latitude: OrderedFloat(37.777843),
+                    longitude: OrderedFloat(-122.468207),
+                    altitude_meters: OrderedFloat(0.0),
+                },
+                forward_to: None,
+                status: crate::status::Status::Ok,
+            },
+            Node {
+                uid: "2".to_string(),
+                location: Location {
+                    latitude: OrderedFloat(37.778339),
+                    longitude: OrderedFloat(-122.460395),
+                    altitude_meters: OrderedFloat(0.0),
+                },
+                forward_to: None,
+                status: crate::status::Status::Ok,
+            },
+            Node {
+                uid: "3".to_string(),
+                location: Location {
+                    latitude: OrderedFloat(37.780596),
+                    longitude: OrderedFloat(-122.434904),
+                    altitude_meters: OrderedFloat(0.0),
+                },
+                forward_to: None,
+                status: crate::status::Status::Ok,
+            },
+            Node {
+                uid: "4".to_string(),
+                location: Location {
+                    latitude: OrderedFloat(40.738820),
+                    longitude: OrderedFloat(-73.990440),
+                    altitude_meters: OrderedFloat(0.0),
+                },
+                forward_to: None,
+                status: crate::status::Status::Ok,
+            },
+        ];
+
+        let router = Router::new(
+            &nodes,
+            10000.0,
+            |from, to| haversine::distance(&from.as_node().location, &to.as_node().location),
+            |from, to| haversine::distance(&from.as_node().location, &to.as_node().location),
+        );
+
+        let edges = router.get_edges();
+        assert_eq!(edges.len(), 12);
+        assert_eq!(edges[0].to.get_uid(), "2");
+        assert_eq!(edges[1].to.get_uid(), "3");
     }
 }
