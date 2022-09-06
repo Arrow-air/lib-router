@@ -102,7 +102,11 @@ pub mod engine {
         /// A tuple of the total cost and the path consisting of node
         /// indeces.
         ///
-        /// Note that the path excludes the ending node.
+        /// An empty path with a total cost of 0.0 returned if no path
+        /// is found.
+        ///
+        /// An empty path with a total cost of -1.0 is returned if
+        /// either the `from` or `to` node is not found.
         pub fn find_shortest_path(
             &self,
             from: &Node,
@@ -110,26 +114,30 @@ pub mod engine {
             algorithm: Algorithm,
             heuristic_function: Option<fn(NodeIndex) -> f32>,
         ) -> (f32, Vec<NodeIndex>) {
-            let from_index = self.get_node_index(from).unwrap();
-            let to_index = self.get_node_index(to).unwrap();
-            match algorithm {
-                Algorithm::Dijkstra => astar(
-                    &self.graph,
-                    from_index,
-                    |finish| finish == to_index,
-                    |e| (*e.weight()).into_inner(),
-                    heuristic_function.unwrap_or(|_| 0.0),
-                )
-                .unwrap_or((0.0, Vec::new())),
+            if self.get_node_index(from).is_some() && self.get_node_index(to).is_some() {
+                let from_index = self.get_node_index(from).unwrap();
+                let to_index = self.get_node_index(to).unwrap();
+                match algorithm {
+                    Algorithm::Dijkstra => astar(
+                        &self.graph,
+                        from_index,
+                        |finish| finish == to_index,
+                        |e| (*e.weight()).into_inner(),
+                        heuristic_function.unwrap_or(|_| 0.0),
+                    )
+                    .unwrap_or((0.0, Vec::new())),
 
-                Algorithm::AStar => astar(
-                    &self.graph,
-                    from_index,
-                    |finish| finish == to_index,
-                    |e| (*e.weight()).into_inner(),
-                    heuristic_function.unwrap_or(|_| 0.0),
-                )
-                .unwrap_or((0.0, Vec::new())),
+                    Algorithm::AStar => astar(
+                        &self.graph,
+                        from_index,
+                        |finish| finish == to_index,
+                        |e| (*e.weight()).into_inner(),
+                        heuristic_function.unwrap_or(|_| 0.0),
+                    )
+                    .unwrap_or((0.0, Vec::new())),
+                }
+            } else {
+                (-1.0, Vec::new())
             }
         }
 
@@ -362,5 +370,76 @@ mod router_tests {
         // should be 0
         assert_eq!(path.len(), 0);
         assert_eq!(path, vec![]);
+    }
+
+    /// Test invalid node queries.
+    #[test]
+    fn test_invalid_node_shortest_path() {
+        let nodes = vec![
+            Node {
+                uid: "1".to_string(),
+                location: Location {
+                    latitude: OrderedFloat(37.777843),
+                    longitude: OrderedFloat(-122.468207),
+                    altitude_meters: OrderedFloat(0.0),
+                },
+                forward_to: None,
+                status: crate::status::Status::Ok,
+            },
+            Node {
+                uid: "2".to_string(),
+                location: Location {
+                    latitude: OrderedFloat(37.778339),
+                    longitude: OrderedFloat(-122.460395),
+                    altitude_meters: OrderedFloat(0.0),
+                },
+                forward_to: None,
+                status: crate::status::Status::Ok,
+            },
+            Node {
+                uid: "3".to_string(),
+                location: Location {
+                    latitude: OrderedFloat(37.780596),
+                    longitude: OrderedFloat(-122.434904),
+                    altitude_meters: OrderedFloat(0.0),
+                },
+                forward_to: None,
+                status: crate::status::Status::Ok,
+            },
+            Node {
+                uid: "4".to_string(),
+                location: Location {
+                    latitude: OrderedFloat(40.738820),
+                    longitude: OrderedFloat(-73.990440),
+                    altitude_meters: OrderedFloat(0.0),
+                },
+                forward_to: None,
+                status: crate::status::Status::Ok,
+            },
+        ];
+
+        let not_in_graph_node = Node {
+            uid: "5".to_string(),
+            location: Location {
+                latitude: OrderedFloat(40.738820),
+                longitude: OrderedFloat(-73.990440),
+                altitude_meters: OrderedFloat(0.0),
+            },
+            forward_to: None,
+            status: crate::status::Status::Ok,
+        };
+
+        let router = Router::new(
+            &nodes,
+            10000.0,
+            |from, to| haversine::distance(&from.as_node().location, &to.as_node().location),
+            |from, to| haversine::distance(&from.as_node().location, &to.as_node().location),
+        );
+
+        let (cost, path) =
+            router.find_shortest_path(&nodes[0], &not_in_graph_node, Algorithm::AStar, None);
+
+        assert_eq!(cost, -1.0);
+        assert_eq!(path.len(), 0);
     }
 }
