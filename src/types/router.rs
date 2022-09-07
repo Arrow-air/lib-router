@@ -83,6 +83,15 @@ pub mod engine {
             self.node_indices.get(node).cloned()
         }
 
+        /// Get a node by NodeIndex.
+        pub fn get_node_by_id(&self, index: NodeIndex) -> Option<&Node> {
+            if self.graph.contains_node(index) {
+                Some(self.graph[index])
+            } else {
+                None
+            }
+        }
+
         /// Return the number of edges in the graph.
         pub fn get_edge_count(&self) -> usize {
             self.graph.edge_count()
