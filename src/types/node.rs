@@ -14,6 +14,7 @@
 //! This pattern allows functions to be agnostic of the type of `Node` to
 //! accept as argument.
 use ordered_float::OrderedFloat;
+use serde::{Deserialize, Serialize};
 
 use super::location;
 use super::status;
@@ -42,7 +43,7 @@ pub trait AsNode {
 ///
 /// Since the actual vertex can be any object, a generic struct is
 /// needed for the purpose of abstraction and clarity.
-#[derive(Debug, PartialEq, Hash, Eq)]
+#[derive(Debug, PartialEq, Hash, Eq, Serialize, Deserialize)]
 pub struct Node {
     /// Typed as a [`String`] to allow for synthetic ids. One purpose of
     /// using a synthetic id is to allow for partitioned indexing on the

@@ -2,7 +2,7 @@
 
 use ordered_float::OrderedFloat;
 
-use crate::types::node::{AsNode, Node};
+use crate::{edge::Edge, types::node::AsNode};
 
 /// Build edges among nodes.
 ///
@@ -33,7 +33,7 @@ pub fn build_edges(
     constraint: f32,
     constraint_function: fn(&dyn AsNode, &dyn AsNode) -> f32,
     cost_function: fn(&dyn AsNode, &dyn AsNode) -> f32,
-) -> Vec<(&Node, &Node, OrderedFloat<f32>)> {
+) -> Vec<Edge> {
     let mut edges = Vec::new();
     for from in nodes {
         for to in nodes {
@@ -41,7 +41,11 @@ pub fn build_edges(
                 && constraint_function(from.as_node(), to.as_node()) <= constraint
             {
                 let cost = cost_function(from.as_node(), to.as_node());
-                edges.push((from.as_node(), to.as_node(), OrderedFloat(cost)));
+                edges.push(Edge {
+                    from: from.as_node(),
+                    to: to.as_node(),
+                    cost: OrderedFloat(cost),
+                });
             }
         }
     }

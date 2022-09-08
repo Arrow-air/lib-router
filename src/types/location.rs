@@ -4,6 +4,7 @@
 //! coordinate.
 
 use ordered_float::OrderedFloat;
+use serde::{Deserialize, Serialize};
 
 /// A [`Location`] is an interface type that represents a geographic
 /// location of an object. Typically, this type is used in tandem with
@@ -14,7 +15,7 @@ use ordered_float::OrderedFloat;
 ///
 /// Float values are used to achieve a 5-decimal precision (0.00001),
 /// which narrows the error margin to a meter.
-#[derive(Debug, PartialEq, Hash, Eq, Copy, Clone)]
+#[derive(Debug, PartialEq, Hash, Eq, Copy, Clone, Serialize, Deserialize)]
 pub struct Location {
     /// The latitude of the location.
     pub latitude: OrderedFloat<f32>,
