@@ -30,6 +30,45 @@ Install Rust with [Rustup](https://www.rust-lang.org/tools/install).
 cargo test
 ```
 
+## Make
+
+### Build and test
+
+To ensure consistent build and test outputs, Arrow provides a Docker image with all required software installed to build and test Rust projects.
+Using the Makefile, you can easily test and build your code.
+
+```bash
+# Run tests
+make test
+
+# Run build
+make build
+```
+
+### Formatting
+
+The Arrow docker image has some formatting tools installed which can fix your code formatting for you.
+Using the Makefile, you can easily run the formatters on your code.
+Make sure to commit your code before running these commands, as they might not always result in a desired outcome.
+
+```bash
+# Format TOML files
+make toml-tidy
+
+# Format Rust files
+make rust-tidy
+
+# Format Python files
+make python-tidy
+
+# Format all at once
+make tidy
+```
+
+### Other make targets
+
+There are additional make targets available. You can find all possible targets by running make without a target or use `make help`
+
 ## :scroll: Documentation
 The following documents are relevant to this library:
 - [Requirements & User Stories](https://docs.google.com/spreadsheets/d/1Ad238NAEj6QUzgsjPTRRFJy6NiQVQt2e7affwVVDAFo/edit?usp=sharing)
