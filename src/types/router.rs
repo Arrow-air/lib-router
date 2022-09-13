@@ -29,7 +29,7 @@ pub mod engine {
     /// Path finding algorithms.
     #[derive(Debug, Copy, Clone)]
     pub enum Algorithm {
-        /// The Dikstra algorithm.
+        /// The Dijkstra algorithm.
         Dijkstra,
         /// The A Star algorithm.
         AStar,
@@ -99,7 +99,7 @@ pub mod engine {
 
         /// Find the shortest path between two nodes.
         ///
-        /// The petgraph's dijkstra algorithm is very indentical to the
+        /// The petgraph's Dijkstra algorithm is very identical to the
         /// a star algorithm, so we can use the same function for both.
         /// The only difference might be how the heuristic function is
         /// implemented.
@@ -112,7 +112,7 @@ pub mod engine {
         ///
         /// # Returns
         /// A tuple of the total cost and the path consisting of node
-        /// indeces.
+        /// indices.
         ///
         /// An empty path with a total cost of 0.0 returned if no path
         /// is found.
