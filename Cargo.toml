@@ -1,34 +1,36 @@
 [package]
-name = "lib_router"
+edition = "2021"   # Allowed values are 2015, 2018, 2021
+name    = "router"
 version = "0.1.0"
-edition = "2021" # Allowed values are 2015, 2018, 2021
 # Rust Editions: https://doc.rust-lang.org/edition-guide/index.html
+documentation = "https://www.arrowair.com/docs/documentation/rust-libs/router"
+homepage      = "https://www.arrowair.com/docs/documentation/rust-libs/router"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cargo-husky = "1"
+cargo-husky   = "1"
 ordered-float = { version = "3.0.0", features = ["serde"] }
-petgraph = "0.6.2"
-rand = "0.8.5"
-vecmath = "1.0.0"
-quaternion = "0.4.1"
-serde  = { version = "1.0.118", features = ["derive"] }
+petgraph      = "0.6.2"
+quaternion    = "0.4.1"
+rand          = "0.8.5"
+serde         = { version = "1.0.118", features = ["derive"] }
+vecmath       = "1.0.0"
 
 [dependencies.uuid]
-version = "1.1.2"
 features = [
-    "v4",                # Lets you generate random UUIDs
-    "fast-rng",          # Use a faster (but still sufficiently random) RNG
-    "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
+  "v4",                # Lets you generate random UUIDs
+  "fast-rng",          # Use a faster (but still sufficiently random) RNG
+  "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
 ]
+version = "1.1.2"
 
 [dev-dependencies.cargo-husky]
-version = "1"
-default-features = false # Disable features which are enabled by default
-features = ["user-hooks"]
+default-features = false          # Disable features which are enabled by default
+features         = ["user-hooks"]
+version          = "1"
 
 
 [lib]
-name = "lib_router"
+name = "router"
 path = "src/lib.rs"

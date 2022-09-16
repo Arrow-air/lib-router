@@ -1,4 +1,4 @@
-//! Helper functons for working with graphs.
+//! Helper functions for working with graphs.
 
 use ordered_float::OrderedFloat;
 
