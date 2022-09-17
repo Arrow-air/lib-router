@@ -37,6 +37,17 @@ pub mod engine {
 
     impl Router<'_> {
         /// Creates a new router with the given graph.
+        ///
+        /// # Arguments
+        /// * `nodes` - A vector of nodes.
+        /// * `constraint` - Only nodes within a constraint can be connected.
+        /// * `constraint_function` - A function that takes two nodes and
+        ///   returns a float to compare against `constraint`.
+        /// * `cost_function` - A function that computes the "weight" between
+        ///   two nodes.
+        ///
+        /// # Returns
+        /// A Router struct.
         pub fn new(
             nodes: &[impl AsNode],
             constraint: f32,
