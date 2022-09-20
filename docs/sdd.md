@@ -10,7 +10,8 @@
 
 | Item | Description |
 | --- | --- |
-| Maintainer(s) | [GoodluckH](https://github.com/GoodluckH) |
+| Maintainer(s) | [Services Team](https://github.com/orgs/Arrow-air/teams/services) |
+| Primary Contact |[GoodluckH](https://github.com/GoodluckH)|
 
 ## Overview
 
