@@ -5,7 +5,7 @@ IMAGE_NAME       := lib-router
 BUILD_IMAGE_NAME := ghcr.io/arrow-air/tools/arrow-rust
 BUILD_IMAGE_TAG  := latest
 DOCKER_PORT      := 8080
-HOST_PORT        := 
+HOST_PORT        :=
 
 # We might not have a Cargo.toml file in the root dir
 CARGO_MANIFEST_PATH ?= $(shell find -maxdepth 2 -name Cargo.toml)
