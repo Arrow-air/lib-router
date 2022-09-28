@@ -7,7 +7,7 @@ BUILD_IMAGE_TAG  := latest
 
 
 # We might not have a Cargo.toml file in the root dir
-CARGO_MANIFEST_PATH ?= $(shell find -maxdepth 2 -name Cargo.toml)
+CARGO_MANIFEST_PATH ?= $(shell find -maxdepth 1 -name Cargo.toml)
 CARGO_INCREMENTAL   ?= 1
 RUSTC_BOOTSTRAP     ?= 0
 RELEASE_TARGET      ?= x86_64-unknown-linux-musl
