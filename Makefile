@@ -6,12 +6,11 @@ DOCKER_NAME := arrow-lib-router
 
 # Combined targets
 
-export
-
 help: .help-base .help-rust .help-python .help-cspell .help-markdown .help-editorconfig .help-toml
-all: test build release publish
+all: test build release rust-publish
+build: rust-build
 
-
+release: rust-release
 test: rust-test-all cspell-test toml-test python-test md-test-links editorconfig-test
 tidy: rust-tidy toml-tidy python-tidy
 
