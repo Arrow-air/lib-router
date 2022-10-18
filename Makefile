@@ -18,6 +18,7 @@ include .make/base.mk
 include .make/cspell.mk
 include .make/markdown.mk
 include .make/editorconfig.mk
+include .make/commitlint.mk
 include .make/toml.mk
 include .make/rust.mk
 include .make/python.mk
