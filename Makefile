@@ -3,9 +3,9 @@
 # File origin: https://github.com/Arrow-air/tf-github/tree/main/src/templates/rust-all/Makefile.tftpl
 
 DOCKER_NAME          := arrow-lib-router
-PACKAGE_NAME         := $(name)
+PACKAGE_NAME         := lib-router
 
-PUBLISH_PACKAGE_NAME := $(name)
+PUBLISH_PACKAGE_NAME := lib-router
 
 help: .help-base .help-rust .help-python .help-cspell .help-markdown .help-editorconfig .help-commitlint .help-toml
 build: rust-build
