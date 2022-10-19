@@ -2,17 +2,22 @@
 # This file was provisioned by Terraform
 # File origin: https://github.com/Arrow-air/tf-github/tree/main/src/templates/rust-all/Makefile.tftpl
 
-DOCKER_NAME := arrow-lib-router
+DOCKER_NAME          := arrow-lib-router
+PACKAGE_NAME         := $(name)
 
-# Combined targets
+PUBLISH_PACKAGE_NAME := $(name)
 
-help: .help-base .help-rust .help-python .help-cspell .help-markdown .help-editorconfig .help-toml
-all: test build release rust-publish
+help: .help-base .help-rust .help-python .help-cspell .help-markdown .help-editorconfig .help-commitlint .help-toml
 build: rust-build
 
+export
+
+clean: rust-clean
 release: rust-release
+publish: rust-publish
 test: rust-test-all cspell-test toml-test python-test md-test-links editorconfig-test
 tidy: rust-tidy toml-tidy python-tidy editorconfig-tidy
+all: clean test build release publish
 
 include .make/base.mk
 include .make/cspell.mk
