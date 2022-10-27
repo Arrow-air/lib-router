@@ -25,7 +25,7 @@ pub mod engine {
     /// Error types for the router engine.
     ///
     /// # Errors
-    /// * `InvalidPath` - The path returned by the path finding
+    /// * `InvalidNodesInPath` - The path returned by the path finding
     ///   algorithm contains invalid nodes
     #[derive(Debug, Copy, Clone)]
     pub enum RouterError {
@@ -33,13 +33,13 @@ pub mod engine {
         /// invalid nodes.
         ///
         /// Expected message: "Invalid path"
-        InvalidPath,
+        InvalidNodesInPath,
     }
 
     impl Display for RouterError {
         fn fmt(&self, f: &mut Formatter) -> Result {
             match self {
-                RouterError::InvalidPath => write!(f, "Invalid path"),
+                RouterError::InvalidNodesInPath => write!(f, "Invalid path"),
             }
         }
     }
@@ -212,7 +212,7 @@ pub mod engine {
                 let node_to = self.get_node_by_id(path[i + 1]);
 
                 if node_from.is_none() || node_to.is_none() {
-                    return Err(RouterError::InvalidPath);
+                    return Err(RouterError::InvalidNodesInPath);
                 }
 
                 total_distance +=
@@ -602,8 +602,14 @@ mod router_tests {
             |from, to| haversine::distance(&from.as_node().location, &to.as_node().location),
         );
 
-        let (cost, path) = router.find_shortest_path(&nodes[0], &nodes[99], Algorithm::AStar, None);
+        let (cost, mut path) =
+            router.find_shortest_path(&nodes[0], &nodes[99], Algorithm::AStar, None);
         assert_eq!(router.get_total_distance(&path).is_ok(), true);
         assert_eq!(router.get_total_distance(&path).unwrap(), cost);
+
+        let mut invalid_path: Vec<petgraph::stable_graph::NodeIndex> =
+            vec![petgraph::stable_graph::NodeIndex::new(300)];
+        path.append(&mut invalid_path);
+        assert_eq!(router.get_total_distance(&path).is_ok(), false);
     }
 }
