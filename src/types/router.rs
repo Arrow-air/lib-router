@@ -13,6 +13,7 @@ pub mod engine {
 
     use crate::{
         edge::Edge,
+        haversine,
         types::node::{AsNode, Node},
         utils::graph::build_edges,
     };
@@ -164,6 +165,34 @@ pub mod engine {
             }
         }
 
+        /// Compute the total Haversine distance of a path.
+        ///
+        /// # Arguments
+        /// * `path` - The path to compute the distance of. The path is
+        ///   given as a vector of [`NodeIndex`] structs.
+        ///
+        /// # Returns
+        /// The total distance of the path.
+        ///
+        /// If the path is empty, 0.0 is returned.
+        ///
+        /// If the path is invalid, -1.0 is returned.
+        pub fn get_total_distance(&self, path: &Vec<NodeIndex>) -> f32 {
+            let mut total_distance = 0.0;
+            for i in 0..path.len() - 1 {
+                let node_from = self.get_node_by_id(path[i]);
+                let node_to = self.get_node_by_id(path[i + 1]);
+
+                if node_from.is_none() || node_to.is_none() {
+                    return -1.0;
+                }
+
+                total_distance +=
+                    haversine::distance(&node_from.unwrap().location, &node_to.unwrap().location);
+            }
+            total_distance
+        }
+
         /// Get the number of nodes in the graph.
         pub fn get_node_count(&self) -> usize {
             self.graph.node_count()
@@ -183,7 +212,10 @@ mod router_tests {
         node::{AsNode, Node},
         router::engine::Algorithm,
         types::router::engine::Router,
-        utils::{generator::generate_nodes_near, haversine},
+        utils::{
+            generator::{generate_nodes, generate_nodes_near},
+            haversine,
+        },
     };
 
     use ordered_float::OrderedFloat;
@@ -528,5 +560,21 @@ mod router_tests {
         assert_eq!(edges.len(), 12);
         assert_eq!(edges[0].to.get_uid(), "2");
         assert_eq!(edges[1].to.get_uid(), "3");
+    }
+
+    /// Test get_total_distance
+    #[test]
+    fn test_get_total_distance() {
+        let nodes = generate_nodes(100);
+
+        let router = Router::new(
+            &nodes,
+            10000.0,
+            |from, to| haversine::distance(&from.as_node().location, &to.as_node().location),
+            |from, to| haversine::distance(&from.as_node().location, &to.as_node().location),
+        );
+
+        let (cost, path) = router.find_shortest_path(&nodes[0], &nodes[99], Algorithm::AStar, None);
+        assert_eq!(router.get_total_distance(&path), cost);
     }
 }
