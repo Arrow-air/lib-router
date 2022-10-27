@@ -6,7 +6,11 @@
 
 /// The router engine module.
 pub mod engine {
-    use std::collections::HashMap;
+    use std::{
+        collections::HashMap,
+        fmt::{Display, Formatter, Result},
+        result::Result as StdResult,
+    };
 
     use ordered_float::OrderedFloat;
     use petgraph::{algo::astar, graph::NodeIndex, stable_graph::StableDiGraph};
@@ -17,6 +21,30 @@ pub mod engine {
         types::node::{AsNode, Node},
         utils::graph::build_edges,
     };
+
+    /// Error types for the router engine.
+    ///
+    /// # Errors
+    /// * `InvalidPath` - The path returned by the path finding
+    ///   algorithm contains invalid nodes
+    #[derive(Debug, Copy, Clone)]
+    pub enum RouterError {
+        /// The path returned by the path finding algorithm contains
+        /// invalid nodes.
+        ///
+        /// Expected message: "Invalid path"
+        InvalidPath,
+    }
+
+    impl Display for RouterError {
+        fn fmt(&self, f: &mut Formatter) -> Result {
+            match self {
+                RouterError::InvalidPath => write!(f, "Invalid path"),
+            }
+        }
+    }
+
+    impl std::error::Error for RouterError {}
 
     /// A Router struct contains a graph of nodes and also a hashmap
     /// that maps a node to its index in the graph.
@@ -177,20 +205,20 @@ pub mod engine {
         /// If the path is empty, 0.0 is returned.
         ///
         /// If the path is invalid, -1.0 is returned.
-        pub fn get_total_distance(&self, path: &Vec<NodeIndex>) -> f32 {
+        pub fn get_total_distance(&self, path: &Vec<NodeIndex>) -> StdResult<f32, RouterError> {
             let mut total_distance = 0.0;
             for i in 0..path.len() - 1 {
                 let node_from = self.get_node_by_id(path[i]);
                 let node_to = self.get_node_by_id(path[i + 1]);
 
                 if node_from.is_none() || node_to.is_none() {
-                    return -1.0;
+                    return Err(RouterError::InvalidPath);
                 }
 
                 total_distance +=
                     haversine::distance(&node_from.unwrap().location, &node_to.unwrap().location);
             }
-            total_distance
+            Ok(total_distance)
         }
 
         /// Get the number of nodes in the graph.
@@ -575,6 +603,7 @@ mod router_tests {
         );
 
         let (cost, path) = router.find_shortest_path(&nodes[0], &nodes[99], Algorithm::AStar, None);
-        assert_eq!(router.get_total_distance(&path), cost);
+        assert_eq!(router.get_total_distance(&path).is_ok(), true);
+        assert_eq!(router.get_total_distance(&path).unwrap(), cost);
     }
 }
