@@ -80,12 +80,12 @@ The following documents are relevant to this library:
 - [ ] `add_edge`: Add an edge to the graph
 - [ ] `remove_node`: Remove a node from the graph
 - [ ] `remove_edge`: Remove an edge from the graph
-- [ ] `get_node_by_uid`: Get a node by its unique ID
+- [x] `get_node_by_uid`: Get a node by its unique ID
 - [ ] `get_edges_by_node_uid`: Get all edges connected to a node
 - [ ] `update_weight`: Update the weight of an edge given two nodes
-- [ ] `has_node`: Check if a node exists in the graph
+- [x] `has_node`: Check if a node exists in the graph (this can be achieved by calling the `get_node_index` function. If the node does not exist, it will just return None)
 - [ ] `has_edge`: Check if an edge exists in the graph
-- [ ] `get_nodes_within_distance`: Get all nodes within a certain distance of a given node
+- [x] ~~`get_nodes_within_distance`: Get all nodes within a certain distance of a given node~~ *This functionality is now expected to be implemented by the user.*
 
 ### Tests:
 - [ ] Integration tests.
@@ -95,5 +95,3 @@ Learn more about us:
 - [Website](https://www.arrowair.com/)
 - [Arrow Docs](https://www.arrowair.com/docs/intro)
 - [Discord](https://discord.com/invite/arrow)
-
-
