@@ -8,6 +8,7 @@ pub use rrule::{RRuleSet, Tz};
 use std::fmt::Display;
 use std::str::FromStr;
 
+/// formats chrono::DateTime to string in format: `YYYYMMDDThhmmssZ`, e.g. 20221026T133000Z
 fn datetime_to_ical_format(dt: &DateTime<Tz>) -> String {
     let mut tz_prefix = String::new();
     let mut tz_postfix = String::new();
@@ -115,6 +116,26 @@ impl Display for Calendar {
 
 impl Calendar {
     /// Wrapper implementation of rrule library's `all` method which also considers duration of the event
+    /// Calendar stores blocking events as rrulesets with duration. This function checks if the time slot is fully available.
+    /// # Examples
+    ///    If the calendar contains a blocking event from 10:00 to 11:00 and we check if 10:30 to 11:30 is available, it will return false
+    ///    If the calendar contains a blocking event from 10:00 to 11:00 and we check if 9:30 to 10:00 is available, it will return true.
+    ///       - if the start or end time is on the boundary with the blocking event, it is considered available.
+    /// Code Example:
+    /// ```
+    ///    use router::schedule::Calendar;
+    ///    use std::str::FromStr;
+    ///    use chrono::TimeZone;
+    ///    use rrule::Tz;
+    ///    let calendar = Calendar::from_str("DTSTART:20221020T180000Z;DURATION:PT14H\n\
+    ///        RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR").unwrap();
+    ///    let mut start = Tz::UTC.ymd(2022, 10, 25).and_hms(17, 0, 0);
+    ///    let mut end = Tz::UTC.ymd(2022, 10, 25).and_hms(18, 0, 0);
+    ///    assert_eq!(calendar.is_available_between(start, end), true);
+    /// ```     
+    /// * `start_time` - start of the time slot
+    /// * `end_time`   - end of the time slot
+    /// returns true if the time slot is fully available
     pub fn is_available_between(&self, start_time: DateTime<Tz>, end_time: DateTime<Tz>) -> bool {
         // adjust start and end time by one second to make search inclusive of boundary values
         let start_time = start_time + Duration::seconds(1);
