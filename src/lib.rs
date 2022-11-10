@@ -13,6 +13,8 @@ mod utils {
     pub mod generator;
     pub mod graph;
     pub mod haversine;
+    pub mod router_state;
+    pub mod schedule;
 }
 
 pub use types::*;
