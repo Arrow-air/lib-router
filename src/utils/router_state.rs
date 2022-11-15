@@ -82,11 +82,10 @@ pub fn get_possible_flights(
         return Err("Router not initialized".to_string());
     }
     let (route, cost) = get_route(RouteQuery {
-        from: get_node_by_id(&vertiport_depart.id).unwrap(),
-        to: get_node_by_id(&vertiport_arrive.id).unwrap(),
+        from: get_node_by_id(&vertiport_depart.id)?,
+        to: get_node_by_id(&vertiport_arrive.id)?,
         aircraft: Aircraft::Cargo,
-    })
-    .unwrap();
+    })?;
     if route.is_empty() {
         return Err("Route between vertiports not found".to_string());
     }
@@ -108,19 +107,25 @@ pub fn get_possible_flights(
     }
 
     let (departure_time, arrival_time) = if departure_time.is_some() {
-        let departure_time = Tz::UTC.from_utc_datetime(&NaiveDateTime::from_timestamp(
-            departure_time.as_ref().unwrap().seconds,
-            departure_time.as_ref().unwrap().nanos as u32,
-        ));
+        let departure_time = Tz::UTC.from_utc_datetime(
+            &NaiveDateTime::from_timestamp_opt(
+                departure_time.as_ref().unwrap().seconds,
+                departure_time.as_ref().unwrap().nanos as u32,
+            )
+            .ok_or("Invalid departure_time")?,
+        );
         (
             departure_time,
             departure_time + Duration::minutes(block_aircraft_minutes as i64),
         )
     } else {
-        let arrival_time = Tz::UTC.from_utc_datetime(&NaiveDateTime::from_timestamp(
-            arrival_time.as_ref().unwrap().seconds,
-            arrival_time.as_ref().unwrap().nanos as u32,
-        ));
+        let arrival_time = Tz::UTC.from_utc_datetime(
+            &NaiveDateTime::from_timestamp_opt(
+                arrival_time.as_ref().unwrap().seconds,
+                arrival_time.as_ref().unwrap().nanos as u32,
+            )
+            .ok_or("Invalid arrival_time")?,
+        );
         (
             arrival_time - Duration::minutes(block_aircraft_minutes as i64),
             arrival_time,
@@ -204,14 +209,28 @@ pub fn get_node_by_id(id: &str) -> Result<&'static Node, String> {
 }
 
 /// Initialize the router with vertiports from the storage service
-pub fn init_router_from_vertiports(vertiports: &[Vertiport]) {
+pub fn init_router_from_vertiports(vertiports: &[Vertiport]) -> Result<(), String> {
     let nodes = vertiports
         .iter()
         .map(|vertiport| Node {
             uid: vertiport.id.clone(),
             location: Location {
-                latitude: OrderedFloat(vertiport.data.as_ref().unwrap().latitude),
-                longitude: OrderedFloat(vertiport.data.as_ref().unwrap().longitude),
+                latitude: OrderedFloat(
+                    vertiport
+                        .data
+                        .as_ref()
+                        .ok_or_else(|| format!("Something went wrong when parsing latitude data of vertiport id: {}", vertiport.id))
+                        .unwrap()
+                        .latitude,
+                ),
+                longitude: OrderedFloat(
+                    vertiport
+                        .data
+                        .as_ref()
+                        .ok_or_else(|| format!("Something went wrong when parsing longitude data of vertiport id: {}", vertiport.id))
+                        .unwrap()
+                        .longitude,
+                ),
                 altitude_meters: OrderedFloat(0.0),
             },
             forward_to: None,
@@ -219,7 +238,7 @@ pub fn init_router_from_vertiports(vertiports: &[Vertiport]) {
         })
         .collect();
     NODES.set(nodes).expect("Failed to set NODES");
-    init_router();
+    init_router()
 }
 
 /// Takes customer location (src) and required destination (dst) and returns a tuple with nearest vertiports to src and dst
@@ -256,7 +275,7 @@ pub fn get_nearby_nodes(query: NearbyLocationQuery) -> &'static Vec<Node> {
             query.capacity,
         ))
         .expect("Failed to generate nodes");
-    return NODES.get().unwrap();
+    return NODES.get().expect("Failed to get nodes");
 }
 
 /// Checks if router is initialized
@@ -278,6 +297,7 @@ pub fn get_route(req: RouteQuery) -> Result<(Vec<Location>, f32), &'static str> 
     let (cost, path) = ARROW_CARGO_ROUTER
         .get()
         .as_ref()
+        .ok_or("Can't access router")
         .unwrap()
         .find_shortest_path(from, to, Algorithm::Dijkstra, None);
     let locations = path
@@ -286,8 +306,10 @@ pub fn get_route(req: RouteQuery) -> Result<(Vec<Location>, f32), &'static str> 
             ARROW_CARGO_ROUTER
                 .get()
                 .as_ref()
+                .ok_or("Can't access router")
                 .unwrap()
                 .get_node_by_id(*node_idx)
+                .ok_or(format!("Node not found by index {:?}", *node_idx))
                 .unwrap()
                 .location
         })
@@ -296,12 +318,15 @@ pub fn get_route(req: RouteQuery) -> Result<(Vec<Location>, f32), &'static str> 
 }
 
 /// Initializes the router for the given aircraft
-pub fn init_router() -> &'static str {
+pub fn init_router() -> Result<(), String> {
     if NODES.get().is_none() {
-        return "Nodes not initialized. Try to get some nodes first.";
+        return Err("Nodes not initialized. Try to get some nodes first.".to_string());
     }
     if ARROW_CARGO_ROUTER.get().is_some() {
-        return "Router already initialized. Try to use the router instead of initializing it.";
+        return Err(
+            "Router already initialized. Try to use the router instead of initializing it."
+                .to_string(),
+        );
     }
     ARROW_CARGO_ROUTER
         .set(Router::new(
@@ -310,8 +335,7 @@ pub fn init_router() -> &'static str {
             |from, to| haversine::distance(&from.as_node().location, &to.as_node().location),
             |from, to| haversine::distance(&from.as_node().location, &to.as_node().location),
         ))
-        .expect("Failed to initialize router");
-    "Arrow Cargo router initialized."
+        .map_err(|_| "Failed to initialize router".to_string())
 }
 
 #[cfg(test)]
