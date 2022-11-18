@@ -1,17 +1,12 @@
 ## DO NOT EDIT!
 # This file was provisioned by Terraform
-# File origin: https://github.com/Arrow-air/tf-github/tree/main/src/templates/rust-all/Makefile.tftpl
+# File origin: https://github.com/Arrow-air/tf-github/tree/main/src/templates/rust-lib/Makefile
 
-DOCKER_NAME          := arrow-lib-router
-PACKAGE_NAME         := lib-router
-
-PUBLISH_PACKAGE_NAME := lib-router
+include .make/env.mk
+export
 
 help: .help-base .help-rust .help-python .help-cspell .help-markdown .help-editorconfig .help-commitlint .help-toml
 build: rust-build
-
-export
-
 clean: rust-clean
 release: rust-release
 publish: rust-publish
