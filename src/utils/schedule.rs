@@ -129,8 +129,8 @@ impl Calendar {
     ///    use rrule::Tz;
     ///    let calendar = Calendar::from_str("DTSTART:20221020T180000Z;DURATION:PT14H\n\
     ///        RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR").unwrap();
-    ///    let mut start = Tz::UTC.ymd(2022, 10, 25).and_hms(17, 0, 0);
-    ///    let mut end = Tz::UTC.ymd(2022, 10, 25).and_hms(18, 0, 0);
+    ///    let mut start = Tz::UTC.with_ymd_and_hms(2022, 10, 25,17, 0, 0).unwrap();
+    ///    let mut end = Tz::UTC.with_ymd_and_hms(2022, 10, 25,18, 0, 0).unwrap();
     ///    assert_eq!(calendar.is_available_between(start, end), true);
     /// ```     
     /// * `start_time` - start of the time slot
@@ -209,16 +209,16 @@ mod calendar_tests {
     #[test]
     fn test_night_unavailable() {
         let calendar = Calendar::from_str(CAL_WORKDAYS_8AM_6PM).unwrap();
-        let start = Tz::UTC.ymd(2022, 10, 25).and_hms(19, 0, 0);
-        let end = Tz::UTC.ymd(2022, 10, 25).and_hms(20, 0, 0);
+        let start = Tz::UTC.with_ymd_and_hms(2022, 10, 25, 19, 0, 0).unwrap();
+        let end = Tz::UTC.with_ymd_and_hms(2022, 10, 25, 20, 0, 0).unwrap();
         assert_eq!(calendar.is_available_between(start, end), false);
     }
 
     #[test]
     fn test_weekend_unavailable() {
         let calendar = Calendar::from_str(CAL_WORKDAYS_8AM_6PM).unwrap();
-        let start = Tz::UTC.ymd(2022, 10, 22).and_hms(19, 0, 0);
-        let end = Tz::UTC.ymd(2022, 10, 22).and_hms(20, 0, 0);
+        let start = Tz::UTC.with_ymd_and_hms(2022, 10, 22, 19, 0, 0).unwrap();
+        let end = Tz::UTC.with_ymd_and_hms(2022, 10, 22, 20, 0, 0).unwrap();
         assert_eq!(calendar.is_available_between(start, end), false);
     }
 
@@ -226,12 +226,12 @@ mod calendar_tests {
     fn test_inclusive_boundaries_available() {
         let calendar = Calendar::from_str(CAL_WORKDAYS_8AM_6PM).unwrap();
 
-        let mut start = Tz::UTC.ymd(2022, 10, 25).and_hms(17, 0, 0);
-        let mut end = Tz::UTC.ymd(2022, 10, 25).and_hms(18, 0, 0);
+        let mut start = Tz::UTC.with_ymd_and_hms(2022, 10, 25, 17, 0, 0).unwrap();
+        let mut end = Tz::UTC.with_ymd_and_hms(2022, 10, 25, 18, 0, 0).unwrap();
         assert_eq!(calendar.is_available_between(start, end), true);
 
-        start = Tz::UTC.ymd(2022, 10, 25).and_hms(8, 0, 0);
-        end = Tz::UTC.ymd(2022, 10, 25).and_hms(9, 0, 0);
+        start = Tz::UTC.with_ymd_and_hms(2022, 10, 25, 8, 0, 0).unwrap();
+        end = Tz::UTC.with_ymd_and_hms(2022, 10, 25, 9, 0, 0).unwrap();
         assert_eq!(calendar.is_available_between(start, end), true);
     }
 
@@ -240,20 +240,20 @@ mod calendar_tests {
         let calendar =
             Calendar::from_str(&(CAL_WORKDAYS_8AM_6PM.to_owned() + _WITH_1HR_DAILY_BREAK)).unwrap();
 
-        let mut start = Tz::UTC.ymd(2022, 10, 25).and_hms(11, 30, 0);
-        let mut end = Tz::UTC.ymd(2022, 10, 25).and_hms(12, 30, 0);
+        let mut start = Tz::UTC.with_ymd_and_hms(2022, 10, 25, 11, 30, 0).unwrap();
+        let mut end = Tz::UTC.with_ymd_and_hms(2022, 10, 25, 12, 30, 0).unwrap();
         assert_eq!(calendar.is_available_between(start, end), false);
 
-        start = Tz::UTC.ymd(2022, 10, 25).and_hms(8, 0, 0);
-        end = Tz::UTC.ymd(2022, 10, 25).and_hms(12, 0, 0);
+        start = Tz::UTC.with_ymd_and_hms(2022, 10, 25, 8, 0, 0).unwrap();
+        end = Tz::UTC.with_ymd_and_hms(2022, 10, 25, 12, 0, 0).unwrap();
         assert_eq!(calendar.is_available_between(start, end), true);
 
-        start = Tz::UTC.ymd(2022, 10, 25).and_hms(12, 15, 0);
-        end = Tz::UTC.ymd(2022, 10, 25).and_hms(12, 30, 0);
+        start = Tz::UTC.with_ymd_and_hms(2022, 10, 25, 12, 15, 0).unwrap();
+        end = Tz::UTC.with_ymd_and_hms(2022, 10, 25, 12, 30, 0).unwrap();
         assert_eq!(calendar.is_available_between(start, end), false);
 
-        start = Tz::UTC.ymd(2022, 10, 25).and_hms(12, 59, 0);
-        end = Tz::UTC.ymd(2022, 10, 25).and_hms(13, 30, 0);
+        start = Tz::UTC.with_ymd_and_hms(2022, 10, 25, 12, 59, 0).unwrap();
+        end = Tz::UTC.with_ymd_and_hms(2022, 10, 25, 13, 30, 0).unwrap();
         assert_eq!(calendar.is_available_between(start, end), false);
     }
 
@@ -262,20 +262,20 @@ mod calendar_tests {
         let calendar =
             Calendar::from_str(&(CAL_WORKDAYS_8AM_6PM.to_owned() + _WITH_ONE_OFF_BLOCK)).unwrap();
 
-        let mut start = Tz::UTC.ymd(2022, 10, 26).and_hms(13, 30, 0);
-        let mut end = Tz::UTC.ymd(2022, 10, 26).and_hms(14, 30, 0);
+        let mut start = Tz::UTC.with_ymd_and_hms(2022, 10, 26, 13, 30, 0).unwrap();
+        let mut end = Tz::UTC.with_ymd_and_hms(2022, 10, 26, 14, 30, 0).unwrap();
         assert_eq!(calendar.is_available_between(start, end), false);
 
-        start = Tz::UTC.ymd(2022, 10, 27).and_hms(13, 30, 0);
-        end = Tz::UTC.ymd(2022, 10, 27).and_hms(14, 30, 0);
+        start = Tz::UTC.with_ymd_and_hms(2022, 10, 27, 13, 30, 0).unwrap();
+        end = Tz::UTC.with_ymd_and_hms(2022, 10, 27, 14, 30, 0).unwrap();
         assert_eq!(calendar.is_available_between(start, end), true);
 
-        start = Tz::UTC.ymd(2022, 10, 26).and_hms(11, 00, 0);
-        end = Tz::UTC.ymd(2022, 10, 26).and_hms(13, 30, 0);
+        start = Tz::UTC.with_ymd_and_hms(2022, 10, 26, 11, 00, 0).unwrap();
+        end = Tz::UTC.with_ymd_and_hms(2022, 10, 26, 13, 30, 0).unwrap();
         assert_eq!(calendar.is_available_between(start, end), true);
 
-        start = Tz::UTC.ymd(2022, 10, 26).and_hms(11, 00, 0);
-        end = Tz::UTC.ymd(2022, 10, 26).and_hms(13, 30, 1);
+        start = Tz::UTC.with_ymd_and_hms(2022, 10, 26, 11, 00, 0).unwrap();
+        end = Tz::UTC.with_ymd_and_hms(2022, 10, 26, 13, 30, 1).unwrap();
         assert_eq!(calendar.is_available_between(start, end), false);
     }
 
@@ -293,6 +293,6 @@ mod calendar_tests {
     #[test]
     #[should_panic]
     fn test_invalid_input() {
-        let calendar = Calendar::from_str(INVALID_CALENDAR).unwrap();
+        let _calendar = Calendar::from_str(INVALID_CALENDAR).unwrap();
     }
 }

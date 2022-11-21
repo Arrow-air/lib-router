@@ -160,13 +160,11 @@ pub fn get_possible_flights(
     let flight_plans = vec![FlightPlanData {
         pilot_id: "".to_string(),
         vehicle_id: "".to_string(),
-        cargo_weight: vec![],
-        flight_distance: (cost * 1000.0) as u32,
+        cargo_weight_g: vec![],
+        flight_distance: (cost * 1000.0) as i64,
         weather_conditions: "".to_string(),
-        departure_vertiport_id: vertiport_depart.id,
-        departure_pad_id: "".to_string(),
-        destination_vertiport_id: vertiport_arrive.id,
-        destination_pad_id: "".to_string(),
+        departure_vertiport_id: Some(vertiport_depart.id),
+        destination_vertiport_id: Some(vertiport_arrive.id),
         scheduled_departure: Some(Timestamp {
             seconds: departure_time.timestamp(),
             nanos: departure_time.timestamp_subsec_nanos() as i32,
@@ -182,6 +180,8 @@ pub fn get_possible_flights(
         approved_by: None,
         flight_status: 0,
         flight_priority: 0,
+        departure_vertipad_id: "".to_string(),
+        destination_vertipad_id: "".to_string(),
     }];
     Ok(flight_plans)
 }
