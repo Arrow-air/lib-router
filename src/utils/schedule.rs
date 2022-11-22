@@ -10,8 +10,10 @@ use std::str::FromStr;
 
 /// formats chrono::DateTime to string in format: `YYYYMMDDThhmmssZ`, e.g. 20221026T133000Z
 fn datetime_to_ical_format(dt: &DateTime<Tz>) -> String {
+    debug!("datetime_to_ical_format: {:?}", dt);
     let mut tz_prefix = String::new();
     let mut tz_postfix = String::new();
+    debug!("datetime_to_ical_format: tz: {:?}", dt.timezone());
     let tz = dt.timezone();
     match tz {
         Tz::Local(_) => {}
@@ -26,6 +28,7 @@ fn datetime_to_ical_format(dt: &DateTime<Tz>) -> String {
     }
 
     let dt = dt.format("%Y%m%dT%H%M%S");
+    debug!("datetime_to_ical_format: dt: {:?}", dt);
     format!("{}{}{}", tz_prefix, dt, tz_postfix)
 }
 
@@ -54,12 +57,15 @@ impl FromStr for Calendar {
     ///   "DTSTART:20221020T180000Z;DURATION:PT1H" not "DURATION:PT1H;DTSTART:20221020T180000Z"
     /// Duration is in ISO8601 format (`iso8601_duration` crate)
     fn from_str(calendar_str: &str) -> Result<Self, Self::Err> {
+        info!("Parsing calendar: {}", calendar_str);
         let rrule_sets: Vec<&str> = calendar_str
             .split("DTSTART:")
             .filter(|s| !s.is_empty())
             .collect();
+        debug!("rrule_sets: {:?}", rrule_sets);
         let mut recurrent_events: Vec<RecurrentEvent> = Vec::new();
         for rrule_set_str in rrule_sets {
+            debug!("rrule_set_str: {}", rrule_set_str);
             let rrules_with_header: Vec<&str> = rrule_set_str
                 .split('\n')
                 .filter(|s| !s.is_empty())
@@ -85,6 +91,7 @@ impl FromStr for Calendar {
                 duration: duration.to_string(),
             });
         }
+        info!("Parsed calendar: {:?}", recurrent_events);
         Ok(Calendar {
             events: recurrent_events,
         })
@@ -137,9 +144,17 @@ impl Calendar {
     /// * `end_time`   - end of the time slot
     /// returns true if the time slot is fully available
     pub fn is_available_between(&self, start_time: DateTime<Tz>, end_time: DateTime<Tz>) -> bool {
+        info!(
+            "Checking if time slot is available between {} and {}",
+            start_time, end_time
+        );
+
         // adjust start and end time by one second to make search inclusive of boundary values
         let start_time = start_time + Duration::seconds(1);
         let end_time = end_time - Duration::seconds(1);
+
+        debug!("Adjusted start_time: {}", start_time);
+        debug!("Adjusted end_time: {}", end_time);
         for event in &self.events {
             let duration = &event.duration;
             // check standard rrule time - if event(block) start time is between two dates,
@@ -151,6 +166,7 @@ impl Calendar {
                 .before(end_time)
                 .all(1);
             if !events.is_empty() {
+                info!("Time slot is not available");
                 return false;
             }
             let d = DurationParser::parse(duration).expect("Failed to parse duration");
@@ -168,10 +184,12 @@ impl Calendar {
                 .before(end_time)
                 .all(10);
             if !events.is_empty() {
+                info!("Time slot is not available");
                 return false;
             }
         }
         // if no events(blocks) found across all rrule_sets, then time slot is available
+        info!("Time slot is available");
         true
     }
 }

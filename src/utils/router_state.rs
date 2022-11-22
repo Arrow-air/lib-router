@@ -77,8 +77,11 @@ pub fn get_possible_flights(
     arrival_time: Option<Timestamp>,
     aircrafts: Vec<Vehicle>,
 ) -> Result<Vec<FlightPlanData>, String> {
+    info!("Finding possible flights");
     //1. Find route and cost between requested vertiports
+    info!("[1/5]: Finding route between vertiports");
     if !is_router_initialized() {
+        error!("Router not initialized");
         return Err("Router not initialized".to_string());
     }
     let (route, cost) = get_route(RouteQuery {
@@ -86,23 +89,32 @@ pub fn get_possible_flights(
         to: get_node_by_id(&vertiport_arrive.id)?,
         aircraft: Aircraft::Cargo,
     })?;
+    debug!("Route: {:?}", route);
+    debug!("Cost: {:?}", cost);
     if route.is_empty() {
+        error!("No route found");
         return Err("Route between vertiports not found".to_string());
     }
-    println!("route distance: {:?}", cost);
 
     //2. calculate blocking times for each vertiport and aircraft
+    info!("[2/5]: Calculating blocking times");
     let block_departure_vertiport_minutes = LOADING_AND_TAKEOFF_TIME_MIN;
     let block_arrival_vertiport_minutes = LANDING_AND_UNLOADING_TIME_MIN;
     let block_aircraft_minutes = estimate_flight_time_minutes(cost, Aircraft::Cargo);
+    debug!(
+        "Estimated flight time in minutes: {}",
+        block_aircraft_minutes
+    );
 
     //3. check vertiport schedules and flight plans
+    info!("[3/5]: Checking vertiport schedules and flight plans");
     const SAMPLE_CAL: &str =
         "DTSTART:20221020T180000Z;DURATION:PT1H\nRRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR";
     let departure_vertiport_schedule = Calendar::from_str(SAMPLE_CAL).unwrap(); //TODO get from DB
     let arrival_vertiport_schedule = Calendar::from_str(SAMPLE_CAL).unwrap(); //TODO get from DB
 
     if departure_time.is_none() && arrival_time.is_none() {
+        error!("Either departure or arrival time must be specified");
         return Err("Either departure_time or arrival_time must be set".to_string());
     }
 
@@ -140,9 +152,11 @@ pub fn get_possible_flights(
         arrival_time,
     );
     if !is_departure_vertiport_available {
+        error!("Departure vertiport not available");
         return Err("Departure vertiport not available".to_string());
     }
     if !is_arrival_vertiport_available {
+        error!("Arrival vertiport not available");
         return Err("Arrival vertiport not available".to_string());
     }
     for _aircraft in aircrafts {
@@ -155,8 +169,9 @@ pub fn get_possible_flights(
     }
 
     //4. TODO: check other constraints (cargo weight, number of passenger seats)
-
+    info!("[4/5]: Checking other constraints (cargo weight, number of passenger seats)");
     //5. return draft flight plan(s)
+    info!("[5/5]: Returning draft flight plan(s)");
     let flight_plans = vec![FlightPlanData {
         pilot_id: "".to_string(),
         vehicle_id: "".to_string(),
@@ -183,12 +198,16 @@ pub fn get_possible_flights(
         departure_vertipad_id: "".to_string(),
         destination_vertipad_id: "".to_string(),
     }];
+    info!("Finished getting flight plans");
+    debug!("Flight plans: {:?}", flight_plans);
     Ok(flight_plans)
 }
 
 /// Estimates the time needed to travel between two locations including loading and unloading
 /// Estimate should be rather generous to block resources instead of potentially overloading them
 pub fn estimate_flight_time_minutes(distance_km: f32, aircraft: Aircraft) -> f32 {
+    debug!("distance_km: {}", distance_km);
+    debug!("aircraft: {:?}", aircraft);
     match aircraft {
         Aircraft::Cargo => {
             LOADING_AND_TAKEOFF_TIME_MIN
@@ -200,6 +219,7 @@ pub fn estimate_flight_time_minutes(distance_km: f32, aircraft: Aircraft) -> f32
 
 /// gets node by id
 pub fn get_node_by_id(id: &str) -> Result<&'static Node, String> {
+    debug!("id: {}", id);
     let nodes = NODES.get().expect("Nodes not initialized");
     let node = nodes
         .iter()
@@ -210,6 +230,7 @@ pub fn get_node_by_id(id: &str) -> Result<&'static Node, String> {
 
 /// Initialize the router with vertiports from the storage service
 pub fn init_router_from_vertiports(vertiports: &[Vertiport]) -> Result<(), String> {
+    info!("Initializing router from vertiports");
     let nodes = vertiports
         .iter()
         .map(|vertiport| Node {
@@ -247,13 +268,21 @@ pub fn get_nearest_vertiports<'a>(
     dst_location: &'a Location,
     vertiports: &'static Vec<Node>,
 ) -> (&'static Node, &'static Node) {
+    info!("Getting nearest vertiports");
     let mut src_vertiport = &vertiports[0];
     let mut dst_vertiport = &vertiports[0];
+    debug!("src_location: {:?}", src_location);
+    debug!("dst_location: {:?}", dst_location);
     let mut src_distance = haversine::distance(src_location, &src_vertiport.location);
     let mut dst_distance = haversine::distance(dst_location, &dst_vertiport.location);
+    debug!("src_distance: {}", src_distance);
+    debug!("dst_distance: {}", dst_distance);
     for vertiport in vertiports {
+        debug!("checking vertiport: {:?}", vertiport);
         let new_src_distance = haversine::distance(src_location, &vertiport.location);
         let new_dst_distance = haversine::distance(dst_location, &vertiport.location);
+        debug!("new_src_distance: {}", new_src_distance);
+        debug!("new_dst_distance: {}", new_dst_distance);
         if new_src_distance < src_distance {
             src_distance = new_src_distance;
             src_vertiport = vertiport;
@@ -263,11 +292,14 @@ pub fn get_nearest_vertiports<'a>(
             dst_vertiport = vertiport;
         }
     }
+    debug!("src_vertiport: {:?}", src_vertiport);
+    debug!("dst_vertiport: {:?}", dst_vertiport);
     (src_vertiport, dst_vertiport)
 }
 
 /// Returns a list of nodes near the given location
 pub fn get_nearby_nodes(query: NearbyLocationQuery) -> &'static Vec<Node> {
+    debug!("query: {:?}", query);
     NODES
         .set(generate_nodes_near(
             &query.location,
@@ -285,6 +317,7 @@ pub fn is_router_initialized() -> bool {
 
 /// Get route
 pub fn get_route(req: RouteQuery) -> Result<(Vec<Location>, f32), &'static str> {
+    info!("Getting route");
     let RouteQuery {
         from,
         to,
@@ -300,6 +333,8 @@ pub fn get_route(req: RouteQuery) -> Result<(Vec<Location>, f32), &'static str> 
         .ok_or("Can't access router")
         .unwrap()
         .find_shortest_path(from, to, Algorithm::Dijkstra, None);
+    debug!("cost: {}", cost);
+    debug!("path: {:?}", path);
     let locations = path
         .iter()
         .map(|node_idx| {
@@ -314,6 +349,8 @@ pub fn get_route(req: RouteQuery) -> Result<(Vec<Location>, f32), &'static str> 
                 .location
         })
         .collect::<Vec<Location>>();
+    debug!("locations: {:?}", locations);
+    info!("Finished getting route");
     Ok((locations, cost))
 }
 
