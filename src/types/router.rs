@@ -120,11 +120,13 @@ pub mod engine {
         /// Get the NodeIndex struct for a given node. The NodeIndex
         /// struct is used to reference things in the graph.
         pub fn get_node_index(&self, node: &Node) -> Option<NodeIndex> {
+            debug!("Node: {:?}", node);
             self.node_indices.get(node).cloned()
         }
 
         /// Get a node by NodeIndex.
         pub fn get_node_by_id(&self, index: NodeIndex) -> Option<&Node> {
+            debug!("Node id: {:?}", index);
             if self.graph.contains_node(index) {
                 Some(self.graph[index])
             } else {
@@ -134,6 +136,7 @@ pub mod engine {
 
         /// Return the number of edges in the graph.
         pub fn get_edge_count(&self) -> usize {
+            debug!("Edge count: {}", self.graph.edge_count());
             self.graph.edge_count()
         }
 
@@ -166,6 +169,10 @@ pub mod engine {
             algorithm: Algorithm,
             heuristic_function: Option<fn(NodeIndex) -> f32>,
         ) -> (f32, Vec<NodeIndex>) {
+            info!(
+                "Finding shortest path from {:?} to {:?} using algorithm {:?}",
+                from.location, to.location, algorithm
+            );
             if self.get_node_index(from).is_some() && self.get_node_index(to).is_some() {
                 let from_index = self.get_node_index(from).unwrap();
                 let to_index = self.get_node_index(to).unwrap();
@@ -189,6 +196,7 @@ pub mod engine {
                     .unwrap_or((0.0, Vec::new())),
                 }
             } else {
+                warn!("Either the from or to node is not found.");
                 (-1.0, Vec::new())
             }
         }
@@ -206,28 +214,35 @@ pub mod engine {
         ///
         /// If the path is invalid, -1.0 is returned.
         pub fn get_total_distance(&self, path: &Vec<NodeIndex>) -> StdResult<f32, RouterError> {
+            info!("Computing total distance of path");
             let mut total_distance = 0.0;
             for i in 0..path.len() - 1 {
                 let node_from = self.get_node_by_id(path[i]);
                 let node_to = self.get_node_by_id(path[i + 1]);
 
                 if node_from.is_none() || node_to.is_none() {
+                    error!("Either the from or to node is not found.");
                     return Err(RouterError::InvalidNodesInPath);
                 }
 
                 total_distance +=
                     haversine::distance(&node_from.unwrap().location, &node_to.unwrap().location);
             }
+            debug!("Total distance: {}", total_distance);
             Ok(total_distance)
         }
 
         /// Get the number of nodes in the graph.
         pub fn get_node_count(&self) -> usize {
+            info!("Getting node count");
+            debug!("Node count: {}", self.graph.node_count());
             self.graph.node_count()
         }
 
         /// Get all the edges in the graph.
         pub fn get_edges<'a>(&self) -> &'a Vec<Edge> {
+            info!("Getting all edges");
+            debug!("Edges: {:?}", self.edges);
             &self.edges
         }
     }
