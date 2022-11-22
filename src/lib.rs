@@ -1,5 +1,7 @@
 //! Fleet Routing Algorithm Library.
 //! Handles routing and path-finding tasks.
+#[macro_use]
+extern crate log;
 
 mod types {
     pub mod edge;
