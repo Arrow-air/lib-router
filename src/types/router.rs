@@ -83,14 +83,14 @@ pub mod engine {
             constraint_function: fn(&dyn AsNode, &dyn AsNode) -> f32,
             cost_function: fn(&dyn AsNode, &dyn AsNode) -> f32,
         ) -> Router {
-            println!("[1/4] Initializing the router engine...");
-            println!("[2/4] Building edges...");
+            info!("[1/4] Initializing the router engine...");
+            info!("[2/4] Building edges...");
 
             let edges = build_edges(nodes, constraint, constraint_function, cost_function);
             let mut node_indices = HashMap::new();
             let mut graph = StableDiGraph::new();
 
-            println!("[3/4] Building the graph...");
+            info!("[3/4] Building the graph...");
             for edge in &edges {
                 let from_index = *node_indices
                     .entry(edge.from)
@@ -101,7 +101,7 @@ pub mod engine {
                 graph.add_edge(from_index, to_index, edge.cost);
             }
 
-            println!("[4/4] Finalizing the router setup...");
+            info!("[4/4] Finalizing the router setup...");
             for node in nodes {
                 if !node_indices.contains_key(node.as_node()) {
                     let index = graph.add_node(node.as_node());
@@ -109,7 +109,7 @@ pub mod engine {
                 }
             }
 
-            println!("✨Done! Router engine is ready to use.");
+            info!("✨Done! Router engine is ready to use.");
             Router {
                 graph,
                 node_indices,
