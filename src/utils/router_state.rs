@@ -242,7 +242,7 @@ pub fn init_router_from_vertiports(vertiports: &[Vertiport]) -> Result<(), Strin
                         .as_ref()
                         .ok_or_else(|| format!("Something went wrong when parsing latitude data of vertiport id: {}", vertiport.id))
                         .unwrap()
-                        .latitude,
+                        .latitude as f32,
                 ),
                 longitude: OrderedFloat(
                     vertiport
@@ -250,7 +250,7 @@ pub fn init_router_from_vertiports(vertiports: &[Vertiport]) -> Result<(), Strin
                         .as_ref()
                         .ok_or_else(|| format!("Something went wrong when parsing longitude data of vertiport id: {}", vertiport.id))
                         .unwrap()
-                        .longitude,
+                        .longitude as f32,
                 ),
                 altitude_meters: OrderedFloat(0.0),
             },
