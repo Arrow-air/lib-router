@@ -71,6 +71,10 @@ impl FromStr for Calendar {
                 .filter(|s| !s.is_empty())
                 .collect();
             if rrules_with_header.len() < 2 {
+                error!(
+                    "Invalid rrule with header length: {}",
+                    rrules_with_header.len()
+                );
                 return Err(());
             }
             let header = rrules_with_header[0];
@@ -80,12 +84,21 @@ impl FromStr for Calendar {
                 .filter(|s| !s.is_empty())
                 .collect();
             if header_parts.len() != 2 {
+                error!("Invalid header parts length: {}", header_parts.len());
                 return Err(());
             }
             let dtstart = header_parts[0];
             let duration = header_parts[1];
             let str = "DTSTART:".to_owned() + dtstart + "\n" + rrules.join("\n").as_str();
-            let rrule_set = RRuleSet::from_str(&str).unwrap();
+            let rrset_res = RRuleSet::from_str(&str);
+            if rrset_res.is_err() {
+                error!(
+                    "Invalid rrule set: {}",
+                    rrset_res.err().unwrap().to_string()
+                );
+                return Err(());
+            }
+            let rrule_set = rrset_res.unwrap();
             recurrent_events.push(RecurrentEvent {
                 rrule_set,
                 duration: duration.to_string(),

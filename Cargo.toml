@@ -3,8 +3,6 @@ edition = "2021"   # Allowed values are 2015, 2018, 2021
 name    = "router"
 version = "0.1.0"
 # Rust Editions: https://doc.rust-lang.org/edition-guide/index.html
-documentation = "https://www.arrowair.com/docs/documentation/rust-libs/router"
-homepage      = "https://www.arrowair.com/docs/documentation/rust-libs/router"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
