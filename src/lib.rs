@@ -1,23 +1,23 @@
-//! Library Template for Rust.
-//! This is a crate description, needed or else missing_docs warning will occur.
+//! Fleet Routing Algorithm Library.
+//! Handles routing and path-finding tasks.
+#[macro_use]
+extern crate log;
 
-/// Adds one to a number.
-///
-/// # Arguments
-///
-/// * `val` - Any U8 number.
-///
-pub fn add_one(val: u8) -> u8 {
-    val + 1
+mod types {
+    pub mod edge;
+    pub mod location;
+    pub mod node;
+    pub mod router;
+    pub mod status;
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn ut_add_one() {
-        let val: u8 = 1;
-        assert_eq!(val + 1, add_one(val));
-    }
+mod utils {
+    pub mod generator;
+    pub mod graph;
+    pub mod haversine;
+    pub mod router_state;
+    pub mod schedule;
 }
+
+pub use types::*;
+pub use utils::*;

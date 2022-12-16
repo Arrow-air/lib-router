@@ -1,19 +1,42 @@
 [package]
-name = "lib_template_rust"
+edition = "2021"   # Allowed values are 2015, 2018, 2021
+name    = "router"
 version = "0.1.0"
-edition = "2021" # Allowed values are 2015, 2018, 2021
 # Rust Editions: https://doc.rust-lang.org/edition-guide/index.html
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cargo-husky = "1"
+cargo-husky             = "1"
+chrono                  = "0.4"
+chrono-tz               = "0.6"
+iso8601-duration        = "0.1"
+log                     = "0.4"
+once_cell               = "1.15"
+ordered-float           = { version = "3.0", features = ["serde"] }
+petgraph                = "0.6"
+prost-types             = "0.11"
+quaternion              = "0.4"
+rand                    = "0.8"
+rrule                   = "0.10"
+serde                   = { version = "1.0", features = ["derive"] }
+svc-storage-client-grpc = { git = "https://github.com/Arrow-air/svc-storage.git", branch = "main" }
+vecmath                 = "1.0"
+
+[dependencies.uuid]
+features = [
+  "v4",                # Lets you generate random UUIDs
+  "fast-rng",          # Use a faster (but still sufficiently random) RNG
+  "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
+]
+version = "1.2"
 
 [dev-dependencies.cargo-husky]
-version = "1"
-default-features = false # Disable features which are enabled by default
-features = ["user-hooks"]
+default-features = false          # Disable features which are enabled by default
+features         = ["user-hooks"]
+version          = "1"
+
 
 [lib]
-name = "lib_template_rust"
+name = "router"
 path = "src/lib.rs"
