@@ -57,7 +57,7 @@ impl FromStr for Calendar {
     ///   "DTSTART:20221020T180000Z;DURATION:PT1H" not "DURATION:PT1H;DTSTART:20221020T180000Z"
     /// Duration is in ISO8601 format (`iso8601_duration` crate)
     fn from_str(calendar_str: &str) -> Result<Self, Self::Err> {
-        info!("Parsing calendar: {}", calendar_str);
+        debug!("Parsing calendar: {}", calendar_str);
         let rrule_sets: Vec<&str> = calendar_str
             .split("DTSTART:")
             .filter(|s| !s.is_empty())
@@ -104,7 +104,7 @@ impl FromStr for Calendar {
                 duration: duration.to_string(),
             });
         }
-        info!("Parsed calendar: {:?}", recurrent_events);
+        debug!("Parsed calendar: {:?}", recurrent_events);
         Ok(Calendar {
             events: recurrent_events,
         })
