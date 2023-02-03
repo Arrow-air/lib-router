@@ -627,4 +627,31 @@ mod router_tests {
         path.append(&mut invalid_path);
         assert_eq!(router.get_total_distance(&path).is_ok(), false);
     }
+
+    /// Test RouterError.
+    #[test]
+    fn test_router_error() {
+        let nodes = generate_nodes(100);
+
+        let router = Router::new(
+            &nodes,
+            10000.0,
+            |from, to| haversine::distance(&from.as_node().location, &to.as_node().location),
+            |from, to| haversine::distance(&from.as_node().location, &to.as_node().location),
+        );
+
+        let (cost, mut path) =
+            router.find_shortest_path(&nodes[0], &nodes[99], Algorithm::AStar, None);
+        assert_eq!(router.get_total_distance(&path).is_ok(), true);
+        assert_eq!(router.get_total_distance(&path).unwrap(), cost);
+
+        let mut invalid_path: Vec<petgraph::stable_graph::NodeIndex> =
+            vec![petgraph::stable_graph::NodeIndex::new(300)];
+        path.append(&mut invalid_path);
+        assert_eq!(router.get_total_distance(&path).is_ok(), false);
+        assert_eq!(
+            router.get_total_distance(&path).unwrap_err().to_string(),
+            "Invalid path"
+        );
+    }
 }

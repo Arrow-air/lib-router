@@ -255,6 +255,7 @@ mod node_type_tests {
 
         // check that the vertiport has all vertipads.
         assert_eq!(vertiport.vertipads.len(), 4);
+        assert_eq!(vertiport.get_uid(), "vertiport_1".to_string());
 
         // print the uid of each vertipad in the vertiport.
         assert_eq!(vertiport.vertipads[0].node.uid, "vertipad_1".to_string());
@@ -337,5 +338,19 @@ mod node_type_tests {
         };
         assert_eq!(vertiport.distance_to(&vertipad_1), 0.0);
         assert_eq!(vertiport.distance_to(&vertipad_2), 3340.5833);
+
+        let node = Node {
+            uid: "node_1".to_string(),
+            location: location::Location {
+                longitude: OrderedFloat(-73.935242),
+                latitude: OrderedFloat(40.730610),
+                altitude_meters: 0.0.into(),
+            },
+            forward_to: None,
+            status: status::Status::Ok,
+        };
+
+        assert_eq!(node.distance_to(&vertipad_1), 0.0);
+        assert_eq!(vertipad_1.distance_to(&vertipad_2), 3340.5833);
     }
 }

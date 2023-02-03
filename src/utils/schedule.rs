@@ -209,6 +209,8 @@ impl Calendar {
 
 #[cfg(test)]
 mod calendar_tests {
+    use crate::schedule::datetime_to_ical_format;
+
     use super::Calendar;
     use chrono::TimeZone;
     use rrule::Tz;
@@ -325,5 +327,11 @@ mod calendar_tests {
     #[should_panic]
     fn test_invalid_input() {
         let _calendar = Calendar::from_str(INVALID_CALENDAR).unwrap();
+    }
+
+    #[test]
+    fn test_datetime_to_ical_format() {
+        let dt = Tz::UTC.with_ymd_and_hms(2022, 10, 26, 13, 30, 0).unwrap();
+        assert_eq!(datetime_to_ical_format(&dt), "20221026T133000Z");
     }
 }
