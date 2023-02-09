@@ -157,7 +157,7 @@ impl Calendar {
     /// * `end_time`   - end of the time slot
     /// returns true if the time slot is fully available
     pub fn is_available_between(&self, start_time: DateTime<Tz>, end_time: DateTime<Tz>) -> bool {
-        info!(
+        debug!(
             "Checking if time slot is available between {} and {}",
             start_time, end_time
         );
@@ -179,7 +179,7 @@ impl Calendar {
                 .before(end_time)
                 .all(1);
             if !events.is_empty() {
-                info!("Time slot is not available");
+                debug!("Time slot is not available");
                 return false;
             }
             let d = DurationParser::parse(duration).expect("Failed to parse duration");
@@ -197,12 +197,12 @@ impl Calendar {
                 .before(end_time)
                 .all(10);
             if !events.is_empty() {
-                info!("Time slot is not available");
+                debug!("Time slot is not available");
                 return false;
             }
         }
         // if no events(blocks) found across all rrule_sets, then time slot is available
-        info!("Time slot is available");
+        debug!("Time slot is available");
         true
     }
 }
