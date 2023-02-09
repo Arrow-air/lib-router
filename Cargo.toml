@@ -20,7 +20,7 @@ quaternion              = "0.4"
 rand                    = "0.8"
 rrule                   = "0.10"
 serde                   = { version = "1.0", features = ["derive"] }
-svc-storage-client-grpc = { git = "https://github.com/Arrow-air/svc-storage.git", branch = "main" }
+svc-storage-client-grpc = { git = "https://github.com/Arrow-air/svc-storage.git", branch = "develop" }
 vecmath                 = "1.0"
 
 [dependencies.uuid]
