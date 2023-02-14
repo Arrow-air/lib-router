@@ -6,13 +6,15 @@ use crate::node::Node;
 use crate::router::engine::{Algorithm, Router};
 use crate::schedule::Calendar;
 use crate::{haversine, status};
-use chrono::{Duration, NaiveDateTime, TimeZone};
+use chrono::{DateTime, Duration, NaiveDateTime, TimeZone};
 use once_cell::sync::OnceCell;
 use ordered_float::OrderedFloat;
 use prost_types::Timestamp;
 use rrule::Tz;
 use std::str::FromStr;
-use svc_storage_client_grpc::client::{FlightPlanData, Vehicle, Vertiport};
+use svc_storage_client_grpc::flight_plan::{Data as FlightPlanData, Object as FlightPlan};
+use svc_storage_client_grpc::vehicle::Object as Vehicle;
+use svc_storage_client_grpc::vertiport::Object as Vertiport;
 
 /// Query struct for generating nodes near a location.
 #[derive(Debug, Copy, Clone)]
@@ -66,6 +68,302 @@ pub const FLIGHT_PLAN_GAP_MINUTES: f32 = 5.0;
 /// Max amount of flight plans to return in case of large time window and multiple flights available
 pub const MAX_RETURNED_FLIGHT_PLANS: i64 = 10;
 
+/// Helper function to check if two time ranges overlap (touching ranges are not considered overlapping)
+/// All parameters are in seconds since epoch
+fn time_ranges_overlap(start1: i64, end1: i64, start2: i64, end2: i64) -> bool {
+    start1 < end2 && start2 < end1
+}
+
+/// Helper function to create a flight plan data object from 5 required parameters
+fn create_flight_plan_data(
+    vehicle: &Vehicle,
+    departure_vertiport: &Vertiport,
+    arrival_vertiport: &Vertiport,
+    departure_time: DateTime<Tz>,
+    arrival_time: DateTime<Tz>,
+) -> FlightPlanData {
+    FlightPlanData {
+        pilot_id: "".to_string(),
+        vehicle_id: vehicle.id.clone(),
+        cargo_weight_grams: vec![],
+        weather_conditions: None,
+        departure_vertiport_id: Some(departure_vertiport.id.clone()),
+        destination_vertiport_id: Some(arrival_vertiport.id.clone()),
+        scheduled_departure: Some(Timestamp {
+            seconds: departure_time.timestamp(),
+            nanos: departure_time.timestamp_subsec_nanos() as i32,
+        }),
+        scheduled_arrival: Some(Timestamp {
+            seconds: arrival_time.timestamp(),
+            nanos: arrival_time.timestamp_subsec_nanos() as i32,
+        }),
+        actual_departure: None,
+        actual_arrival: None,
+        flight_release_approval: None,
+        flight_plan_submitted: None,
+        approved_by: None,
+        flight_status: 0,
+        flight_priority: 0,
+        departure_vertipad_id: "".to_string(),
+        destination_vertipad_id: "".to_string(),
+        flight_distance_meters: 0,
+    }
+}
+
+/// Checks if a vehicle is available for a given time window date_from to
+///    date_from + flight_duration_minutes (this includes takeoff and landing time)
+/// This checks both static schedule of the aircraft and existing flight plans which might overlap.
+pub fn is_vehicle_available(
+    vehicle: &Vehicle,
+    date_from: DateTime<Tz>,
+    flight_duration_minutes: i64,
+    existing_flight_plans: &[FlightPlan],
+) -> bool {
+    let vehicle_schedule = Calendar::from_str(
+        vehicle
+            .data
+            .as_ref()
+            .unwrap()
+            .schedule
+            .as_ref()
+            .unwrap()
+            .as_str(),
+    )
+    .unwrap();
+    let date_to = date_from + Duration::minutes(flight_duration_minutes);
+    //check if vehicle is available as per schedule
+    if !vehicle_schedule.is_available_between(date_from, date_to) {
+        return false;
+    }
+    //check if vehicle is available as per existing flight plans
+    let conflicting_flight_plans_count = existing_flight_plans
+        .iter()
+        .filter(|flight_plan| {
+            flight_plan.data.as_ref().unwrap().vehicle_id == vehicle.id
+                && time_ranges_overlap(
+                    flight_plan
+                        .data
+                        .as_ref()
+                        .unwrap()
+                        .scheduled_departure
+                        .as_ref()
+                        .unwrap()
+                        .seconds,
+                    flight_plan
+                        .data
+                        .as_ref()
+                        .unwrap()
+                        .scheduled_arrival
+                        .as_ref()
+                        .unwrap()
+                        .seconds,
+                    date_from.timestamp(),
+                    date_to.timestamp(),
+                )
+        })
+        .count();
+    if conflicting_flight_plans_count > 0 {
+        return false;
+    }
+    true
+}
+
+/// Checks if vertiport is available for a given time window from date_from to date_from + duration
+/// of how long vertiport is blocked by takeoff/landing
+/// This checks both static schedule of vertiport and existing flight plans which might overlap.
+/// is_departure_vertiport is used to determine if we are checking for departure or arrival vertiport
+pub fn is_vertiport_available(
+    vertiport: &Vertiport,
+    date_from: DateTime<Tz>,
+    existing_flight_plans: &[FlightPlan],
+    is_departure_vertiport: bool,
+) -> bool {
+    let vertiport_schedule = Calendar::from_str(
+        vertiport
+            .data
+            .as_ref()
+            .unwrap()
+            .schedule
+            .as_ref()
+            .unwrap()
+            .as_str(),
+    )
+    .unwrap();
+    let block_vertiport_minutes: i64 = if is_departure_vertiport {
+        LOADING_AND_TAKEOFF_TIME_MIN as i64
+    } else {
+        LANDING_AND_UNLOADING_TIME_MIN as i64
+    };
+    let date_to = date_from + Duration::minutes(block_vertiport_minutes);
+    //check if vertiport is available as per schedule
+    if !vertiport_schedule.is_available_between(date_from, date_to) {
+        return false;
+    }
+    let conflicting_flight_plans_count = existing_flight_plans
+        .iter()
+        .filter(|flight_plan| {
+            if is_departure_vertiport {
+                flight_plan
+                    .data
+                    .as_ref()
+                    .unwrap()
+                    .departure_vertiport_id
+                    .clone()
+                    .unwrap()
+                    == vertiport.id
+                    && flight_plan
+                        .data
+                        .as_ref()
+                        .unwrap()
+                        .scheduled_departure
+                        .as_ref()
+                        .unwrap()
+                        .seconds
+                        > date_from.timestamp() - block_vertiport_minutes * 60
+                    && flight_plan
+                        .data
+                        .as_ref()
+                        .unwrap()
+                        .scheduled_departure
+                        .as_ref()
+                        .unwrap()
+                        .seconds
+                        < date_to.timestamp() + block_vertiport_minutes * 60
+            } else {
+                flight_plan
+                    .data
+                    .as_ref()
+                    .unwrap()
+                    .destination_vertiport_id
+                    .clone()
+                    .unwrap()
+                    == vertiport.id
+                    && flight_plan
+                        .data
+                        .as_ref()
+                        .unwrap()
+                        .scheduled_arrival
+                        .as_ref()
+                        .unwrap()
+                        .seconds
+                        > date_from.timestamp() - block_vertiport_minutes * 60
+                    && flight_plan
+                        .data
+                        .as_ref()
+                        .unwrap()
+                        .scheduled_arrival
+                        .as_ref()
+                        .unwrap()
+                        .seconds
+                        < date_to.timestamp() + block_vertiport_minutes * 60
+            }
+        })
+        .count();
+    debug!(
+        "Checking {} is departure: {}, is available for {} - {}? {}",
+        vertiport.id,
+        is_departure_vertiport,
+        date_from,
+        date_to,
+        conflicting_flight_plans_count == 0,
+    );
+    conflicting_flight_plans_count == 0
+}
+
+/// Gets vehicle location (vertiport_id) at given timestamp
+/// Returns tuple of (vertiport_id, minutes_to_arrival)
+/// If minutes_to_arrival is 0, vehicle is parked at the vertiport,
+/// otherwise it is in flight to the vertiport and should arrive in minutes_to_arrival
+pub fn get_vehicle_scheduled_location(
+    vehicle: &Vehicle,
+    timestamp: DateTime<Tz>,
+    existing_flight_plans: &[FlightPlan],
+) -> (String, u32) {
+    let mut vehicle_flight_plans = existing_flight_plans
+        .iter()
+        .filter(|flight_plan| {
+            flight_plan.data.as_ref().unwrap().vehicle_id == vehicle.id
+                && flight_plan
+                    .data
+                    .as_ref()
+                    .unwrap()
+                    .scheduled_departure
+                    .as_ref()
+                    .unwrap()
+                    .seconds
+                    <= timestamp.timestamp()
+        })
+        .collect::<Vec<&FlightPlan>>();
+    vehicle_flight_plans.sort_by(|a, b| {
+        b.data
+            .as_ref()
+            .unwrap()
+            .scheduled_departure
+            .as_ref()
+            .unwrap()
+            .seconds
+            .cmp(
+                &a.data
+                    .as_ref()
+                    .unwrap()
+                    .scheduled_departure
+                    .as_ref()
+                    .unwrap()
+                    .seconds,
+            )
+    });
+    if vehicle_flight_plans.is_empty() {
+        return (
+            vehicle
+                .data
+                .as_ref()
+                .unwrap()
+                .last_vertiport_id
+                .as_ref()
+                .unwrap()
+                .clone(),
+            0,
+        );
+    }
+    let vehicle_flight_plan = vehicle_flight_plans.first().unwrap();
+    debug!(
+        "Vehicle {} had last flight plan {} with destination {}",
+        vehicle.id,
+        vehicle_flight_plan.id.clone(),
+        vehicle_flight_plan
+            .data
+            .as_ref()
+            .unwrap()
+            .destination_vertiport_id
+            .as_ref()
+            .unwrap()
+    );
+    let mut minutes_to_arrival = (vehicle_flight_plan
+        .data
+        .as_ref()
+        .unwrap()
+        .scheduled_arrival
+        .as_ref()
+        .unwrap()
+        .seconds
+        - timestamp.timestamp())
+        / 60;
+    if minutes_to_arrival < 0 {
+        minutes_to_arrival = 0;
+    }
+    (
+        vehicle_flight_plan
+            .data
+            .as_ref()
+            .unwrap()
+            .destination_vertiport_id
+            .as_ref()
+            .unwrap()
+            .to_string(),
+        minutes_to_arrival as u32,
+    )
+}
+
 /// Creates all possible flight plans based on the given request
 /// * `vertiport_depart` - Departure vertiport - svc-storage format
 /// * `vertiport_arrive` - Arrival vertiport - svc-storage format
@@ -79,7 +377,8 @@ pub fn get_possible_flights(
     vertiport_arrive: Vertiport,
     earliest_departure_time: Option<Timestamp>,
     latest_arrival_time: Option<Timestamp>,
-    aircrafts: Vec<Vehicle>,
+    vehicles: Vec<Vehicle>,
+    existing_flight_plans: Vec<FlightPlan>,
 ) -> Result<Vec<FlightPlanData>, String> {
     info!("Finding possible flights");
     if earliest_departure_time.is_none() || latest_arrival_time.is_none() {
@@ -108,12 +407,14 @@ pub fn get_possible_flights(
 
     //2. calculate blocking times for each vertiport and aircraft
     info!("[2/5]: Calculating blocking times");
-    let block_departure_vertiport_minutes = LOADING_AND_TAKEOFF_TIME_MIN;
-    let block_arrival_vertiport_minutes = LANDING_AND_UNLOADING_TIME_MIN;
+
     let block_aircraft_minutes = estimate_flight_time_minutes(cost, Aircraft::Cargo);
+    let block_aircraft_and_vertiports_minutes =
+        block_aircraft_minutes + LOADING_AND_TAKEOFF_TIME_MIN + LANDING_AND_UNLOADING_TIME_MIN;
+
     debug!(
-        "Estimated flight time in minutes: {}",
-        block_aircraft_minutes
+        "Estimated flight time in minutes: {}, with takeoff and landing: {}",
+        block_aircraft_minutes, block_aircraft_and_vertiports_minutes
     );
 
     let time_window_duration_minutes: f32 = ((latest_arrival_time.as_ref().unwrap().seconds
@@ -123,13 +424,15 @@ pub fn get_possible_flights(
         "Time window duration in minutes: {}",
         time_window_duration_minutes
     );
-    if (time_window_duration_minutes - block_aircraft_minutes) < 0.0 {
+    if (time_window_duration_minutes - block_aircraft_and_vertiports_minutes) < 0.0 {
         error!("Time window too small to schedule flight");
         return Err("Time window too small to schedule flight".to_string());
     }
-    let mut num_flight_options: i64 = ((time_window_duration_minutes - block_aircraft_minutes)
+    let mut num_flight_options: i64 = ((time_window_duration_minutes
+        - block_aircraft_and_vertiports_minutes)
         / FLIGHT_PLAN_GAP_MINUTES)
-        .floor() as i64;
+        .floor() as i64
+        + 1;
     if num_flight_options > MAX_RETURNED_FLIGHT_PLANS {
         num_flight_options = MAX_RETURNED_FLIGHT_PLANS;
     }
@@ -140,29 +443,6 @@ pub fn get_possible_flights(
     );
     let mut flight_plans: Vec<FlightPlanData> = vec![];
     for i in 0..num_flight_options {
-        let departure_vertiport_schedule = Calendar::from_str(
-            vertiport_depart
-                .data
-                .as_ref()
-                .unwrap()
-                .schedule
-                .as_ref()
-                .unwrap()
-                .as_str(),
-        )
-        .unwrap(); //TODO manage unwraps
-        let arrival_vertiport_schedule = Calendar::from_str(
-            vertiport_arrive
-                .data
-                .as_ref()
-                .unwrap()
-                .schedule
-                .as_ref()
-                .unwrap()
-                .as_str(),
-        )
-        .unwrap(); //TODO manage unwraps
-
         let departure_time = Tz::UTC.from_utc_datetime(
             &NaiveDateTime::from_timestamp_opt(
                 earliest_departure_time.as_ref().unwrap().seconds
@@ -171,71 +451,98 @@ pub fn get_possible_flights(
             )
             .ok_or("Invalid departure_time")?,
         );
-        let arrival_time = departure_time + Duration::minutes(block_aircraft_minutes as i64);
-
-        let is_departure_vertiport_available = departure_vertiport_schedule.is_available_between(
+        let arrival_time =
+            departure_time + Duration::minutes(block_aircraft_and_vertiports_minutes as i64);
+        let is_departure_vertiport_available = is_vertiport_available(
+            &vertiport_depart,
             departure_time,
-            departure_time + Duration::minutes(block_departure_vertiport_minutes as i64),
+            &existing_flight_plans,
+            true,
         );
-        let is_arrival_vertiport_available = arrival_vertiport_schedule.is_available_between(
-            arrival_time - Duration::minutes(block_arrival_vertiport_minutes as i64),
+        let is_arrival_vertiport_available = is_vertiport_available(
+            &vertiport_arrive,
+            arrival_time - Duration::minutes(LANDING_AND_UNLOADING_TIME_MIN as i64),
+            &existing_flight_plans,
+            false,
+        );
+        debug!(
+            "DEPARTURE TIME: {}, ARRIVAL TIME: {}, {}, {}",
+            departure_time,
             arrival_time,
+            is_departure_vertiport_available,
+            is_arrival_vertiport_available
         );
         if !is_departure_vertiport_available {
-            error!("Departure vertiport not available");
-            return Err("Departure vertiport not available".to_string());
+            info!(
+                "Departure vertiport not available for departure time {}",
+                departure_time
+            );
+            continue;
         }
         if !is_arrival_vertiport_available {
-            error!("Arrival vertiport not available");
-            return Err("Arrival vertiport not available".to_string());
+            info!(
+                "Arrival vertiport not available for departure time {}",
+                departure_time
+            );
+            continue;
         }
-        for aircraft in &aircrafts {
-            let aircraft_schedule = Calendar::from_str(
-                aircraft
-                    .data
-                    .as_ref()
-                    .unwrap()
-                    .schedule
-                    .as_ref()
-                    .unwrap()
-                    .as_str(),
-            )
-            .unwrap(); //TODO handle unwraps
-            let is_aircraft_available =
-                aircraft_schedule.is_available_between(departure_time, arrival_time);
-            if !is_aircraft_available {
-                return Err("Aircraft not available".to_string());
+        //check if aircraft will be parked at the vertiport at the time of departure -
+        //  AND check if aircraft has availability for the flight - then add FP
+        //if not check if aircraft is en-route to the vertiport AND will have availability, if so, continue the cycle to next iteration
+        // otherwise break cycle. We need to get to advanced deadhead scenarios
+        let mut available_vehicle: Option<&Vehicle> = None;
+        for vehicle in &vehicles {
+            debug!(
+                "Checking vehicle id:{} for departure time: {}",
+                &vehicle.id, departure_time
+            );
+            let (vehicle_vertiport_id, minutes_to_arrival) =
+                get_vehicle_scheduled_location(vehicle, departure_time, &existing_flight_plans);
+            if vehicle_vertiport_id != vertiport_depart.id || minutes_to_arrival > 0 {
+                debug!(
+                    "Vehicle id:{} not available at location for requested time {}. It is/will be at vertiport id: {} in {} minutes",
+                    &vehicle.id, departure_time, vehicle_vertiport_id, minutes_to_arrival
+                );
+                continue;
             }
+            let is_vehicle_available = is_vehicle_available(
+                vehicle,
+                departure_time,
+                block_aircraft_and_vertiports_minutes as i64,
+                &existing_flight_plans,
+            );
+            if !is_vehicle_available {
+                debug!(
+                    "Vehicle id:{} not available for departure time: {} and duration {} minutes",
+                    &vehicle.id, departure_time, block_aircraft_and_vertiports_minutes
+                );
+                continue;
+            }
+            //when vehicle is available, break the "vehicles" loop early and add flight plan
+            available_vehicle = Some(vehicle);
+            break;
+        }
+        if available_vehicle.is_none() {
+            info!(
+                "No available vehicles for departure time {}",
+                departure_time
+            );
+            continue;
         }
 
         //4. TODO: check other constraints (cargo weight, number of passenger seats)
         //info!("[4/5]: Checking other constraints (cargo weight, number of passenger seats)");
-        flight_plans.push(FlightPlanData {
-            pilot_id: "".to_string(),
-            vehicle_id: aircrafts[0].id.clone(),
-            cargo_weight_g: vec![],
-            flight_distance: (cost * 1000.0) as i64,
-            weather_conditions: "".to_string(),
-            departure_vertiport_id: Some(vertiport_depart.id.clone()),
-            destination_vertiport_id: Some(vertiport_arrive.id.clone()),
-            scheduled_departure: Some(Timestamp {
-                seconds: departure_time.timestamp(),
-                nanos: departure_time.timestamp_subsec_nanos() as i32,
-            }),
-            scheduled_arrival: Some(Timestamp {
-                seconds: arrival_time.timestamp(),
-                nanos: arrival_time.timestamp_subsec_nanos() as i32,
-            }),
-            actual_departure: None,
-            actual_arrival: None,
-            flight_release_approval: None,
-            flight_plan_submitted: None,
-            approved_by: None,
-            flight_status: 0,
-            flight_priority: 0,
-            departure_vertipad_id: "".to_string(),
-            destination_vertipad_id: "".to_string(),
-        });
+        flight_plans.push(create_flight_plan_data(
+            available_vehicle.unwrap(),
+            &vertiport_depart,
+            &vertiport_arrive,
+            departure_time,
+            arrival_time,
+        ));
+    }
+    if flight_plans.is_empty() {
+        return Err("No flight plans found (deadhead flights not implemented)".to_string());
+        //TODO: another cycle, now with deadhead flights
     }
 
     //5. return draft flight plan(s)
@@ -303,7 +610,7 @@ pub fn init_router_from_vertiports(vertiports: &[Vertiport]) -> Result<(), Strin
             status: status::Status::Ok,
         })
         .collect();
-    NODES.set(nodes).expect("Failed to set NODES");
+    NODES.set(nodes).map_err(|_| "Failed to set NODES")?;
     init_router()
 }
 
@@ -395,7 +702,7 @@ pub fn get_route(req: RouteQuery) -> Result<(Vec<Location>, f32), &'static str> 
         })
         .collect::<Vec<Location>>();
     debug!("locations: {:?}", locations);
-    info!("Finished getting route");
+    info!("Finished getting route with cost: {}", cost);
     Ok((locations, cost))
 }
 
