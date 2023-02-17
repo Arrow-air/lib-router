@@ -50,9 +50,9 @@ pub mod engine {
     /// that maps a node to its index in the graph.
     #[derive(Debug)]
     pub struct Router<'a> {
-        graph: StableDiGraph<&'a Node, OrderedFloat<f32>>,
-        node_indices: HashMap<&'a Node, NodeIndex>,
-        edges: Vec<Edge<'a>>,
+        pub(crate) graph: StableDiGraph<&'a Node, OrderedFloat<f32>>,
+        pub(crate) node_indices: HashMap<&'a Node, NodeIndex>,
+        pub(crate) edges: Vec<Edge<'a>>,
     }
 
     /// Path finding algorithms.
