@@ -87,11 +87,11 @@ fn create_flight_plan_data(
 ) -> FlightPlanData {
     FlightPlanData {
         pilot_id: "".to_string(),
-        vehicle_id: vehicle_id.clone(),
+        vehicle_id,
         cargo_weight_grams: vec![],
         weather_conditions: None,
-        departure_vertiport_id: Some(departure_vertiport_id.clone()),
-        destination_vertiport_id: Some(arrival_vertiport_id.clone()),
+        departure_vertiport_id: Some(departure_vertiport_id),
+        destination_vertiport_id: Some(arrival_vertiport_id),
         scheduled_departure: Some(Timestamp {
             seconds: departure_time.timestamp(),
             nanos: departure_time.timestamp_subsec_nanos() as i32,
