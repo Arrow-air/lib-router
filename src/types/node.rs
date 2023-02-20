@@ -70,6 +70,9 @@ pub struct Node {
     ///
     /// See also [`Status`](Status::Status).
     pub status: status::Status,
+
+    /// calendar of the node as RRule string. (Used for scheduling)
+    pub schedule: Option<String>,
 }
 
 impl AsNode for Node {

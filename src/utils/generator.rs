@@ -75,6 +75,7 @@ pub fn generate_random_node() -> Node {
         location: generate_location(),
         forward_to: None,
         status: status::Status::Ok,
+        schedule: None,
     }
 }
 
@@ -96,6 +97,7 @@ pub fn generate_random_node_near(location: &Location, radius: f32) -> Node {
         location: generate_location_near(location, radius),
         forward_to: None,
         status: status::Status::Ok,
+        schedule: None,
     }
 }
 
