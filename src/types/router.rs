@@ -50,9 +50,9 @@ pub mod engine {
     /// that maps a node to its index in the graph.
     #[derive(Debug)]
     pub struct Router<'a> {
-        graph: StableDiGraph<&'a Node, OrderedFloat<f32>>,
-        node_indices: HashMap<&'a Node, NodeIndex>,
-        edges: Vec<Edge<'a>>,
+        pub(crate) graph: StableDiGraph<&'a Node, OrderedFloat<f32>>,
+        pub(crate) node_indices: HashMap<&'a Node, NodeIndex>,
+        pub(crate) edges: Vec<Edge<'a>>,
     }
 
     /// Path finding algorithms.
@@ -332,6 +332,7 @@ mod router_tests {
                 },
                 forward_to: None,
                 status: crate::status::Status::Ok,
+                schedule: None,
             },
             Node {
                 uid: "2".to_string(),
@@ -342,6 +343,7 @@ mod router_tests {
                 },
                 forward_to: None,
                 status: crate::status::Status::Ok,
+                schedule: None,
             },
             Node {
                 uid: "3".to_string(),
@@ -352,6 +354,7 @@ mod router_tests {
                 },
                 forward_to: None,
                 status: crate::status::Status::Ok,
+                schedule: None,
             },
             Node {
                 uid: "4".to_string(),
@@ -362,6 +365,7 @@ mod router_tests {
                 },
                 forward_to: None,
                 status: crate::status::Status::Ok,
+                schedule: None,
             },
         ];
 
@@ -422,6 +426,7 @@ mod router_tests {
                 },
                 forward_to: None,
                 status: crate::status::Status::Ok,
+                schedule: None,
             },
             Node {
                 uid: "2".to_string(),
@@ -432,6 +437,7 @@ mod router_tests {
                 },
                 forward_to: None,
                 status: crate::status::Status::Ok,
+                schedule: None,
             },
             Node {
                 uid: "3".to_string(),
@@ -442,6 +448,7 @@ mod router_tests {
                 },
                 forward_to: None,
                 status: crate::status::Status::Ok,
+                schedule: None,
             },
             Node {
                 uid: "4".to_string(),
@@ -452,6 +459,7 @@ mod router_tests {
                 },
                 forward_to: None,
                 status: crate::status::Status::Ok,
+                schedule: None,
             },
         ];
 
@@ -488,6 +496,7 @@ mod router_tests {
                 },
                 forward_to: None,
                 status: crate::status::Status::Ok,
+                schedule: None,
             },
             Node {
                 uid: "2".to_string(),
@@ -498,6 +507,7 @@ mod router_tests {
                 },
                 forward_to: None,
                 status: crate::status::Status::Ok,
+                schedule: None,
             },
             Node {
                 uid: "3".to_string(),
@@ -508,6 +518,7 @@ mod router_tests {
                 },
                 forward_to: None,
                 status: crate::status::Status::Ok,
+                schedule: None,
             },
             Node {
                 uid: "4".to_string(),
@@ -518,6 +529,7 @@ mod router_tests {
                 },
                 forward_to: None,
                 status: crate::status::Status::Ok,
+                schedule: None,
             },
         ];
 
@@ -530,6 +542,7 @@ mod router_tests {
             },
             forward_to: None,
             status: crate::status::Status::Ok,
+            schedule: None,
         };
 
         let router = Router::new(
@@ -559,6 +572,7 @@ mod router_tests {
                 },
                 forward_to: None,
                 status: crate::status::Status::Ok,
+                schedule: None,
             },
             Node {
                 uid: "2".to_string(),
@@ -569,6 +583,7 @@ mod router_tests {
                 },
                 forward_to: None,
                 status: crate::status::Status::Ok,
+                schedule: None,
             },
             Node {
                 uid: "3".to_string(),
@@ -579,6 +594,7 @@ mod router_tests {
                 },
                 forward_to: None,
                 status: crate::status::Status::Ok,
+                schedule: None,
             },
             Node {
                 uid: "4".to_string(),
@@ -589,6 +605,7 @@ mod router_tests {
                 },
                 forward_to: None,
                 status: crate::status::Status::Ok,
+                schedule: None,
             },
         ];
 

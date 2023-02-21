@@ -70,6 +70,9 @@ pub struct Node {
     ///
     /// See also [`status::Status`].
     pub status: status::Status,
+
+    /// calendar of the node as RRule string. (Used for scheduling)
+    pub schedule: Option<String>,
 }
 
 impl AsNode for Node {
@@ -183,6 +186,7 @@ mod node_type_tests {
                 },
                 forward_to: None,
                 status: status::Status::Ok,
+                schedule: None,
             },
             size_square_meters: OrderedFloat(100.0),
             permissions: vec!["medical".to_string()],
@@ -198,6 +202,7 @@ mod node_type_tests {
                 },
                 forward_to: None,
                 status: status::Status::Ok,
+                schedule: None,
             },
             size_square_meters: OrderedFloat(100.0),
             permissions: vec!["medical".to_string()],
@@ -213,6 +218,7 @@ mod node_type_tests {
                 },
                 forward_to: None,
                 status: status::Status::Ok,
+                schedule: None,
             },
             size_square_meters: OrderedFloat(100.0),
             permissions: vec!["medical".to_string()],
@@ -228,6 +234,7 @@ mod node_type_tests {
                 },
                 forward_to: None,
                 status: status::Status::Ok,
+                schedule: None,
             },
             vertipads: vec![],
         };
@@ -242,6 +249,7 @@ mod node_type_tests {
                 },
                 forward_to: None,
                 status: status::Status::Ok,
+                schedule: None,
             },
             size_square_meters: OrderedFloat(100.0),
             permissions: vec!["medical".to_string()],
@@ -282,6 +290,7 @@ mod node_type_tests {
                 },
                 forward_to: None,
                 status: status::Status::Ok,
+                schedule: None,
             },
             size_square_meters: OrderedFloat(100.0),
             permissions: vec!["public".to_string()],
@@ -302,6 +311,7 @@ mod node_type_tests {
                 },
                 forward_to: None,
                 status: status::Status::Ok,
+                schedule: None,
             },
             size_square_meters: OrderedFloat(100.0),
             permissions: vec!["public".to_string()],
@@ -317,6 +327,7 @@ mod node_type_tests {
                 },
                 forward_to: None,
                 status: status::Status::Ok,
+                schedule: None,
             },
             size_square_meters: OrderedFloat(100.0),
             permissions: vec!["public".to_string()],
@@ -332,6 +343,7 @@ mod node_type_tests {
                 },
                 forward_to: None,
                 status: status::Status::Ok,
+                schedule: None,
             },
             vertipads: vec![],
         };
