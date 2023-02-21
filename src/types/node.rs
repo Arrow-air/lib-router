@@ -58,7 +58,7 @@ pub struct Node {
 
     /// Denote the geographical position of the node.
     ///
-    /// See also [`Location`].
+    /// See also [`location::Location`].
     pub location: location::Location,
 
     /// A node might be unavailable for some reasons. If `forward_to` is
@@ -68,7 +68,7 @@ pub struct Node {
 
     /// Indicate the operation status of a node.
     ///
-    /// See also [`Status`](Status::Status).
+    /// See also [`status::Status`].
     pub status: status::Status,
 }
 

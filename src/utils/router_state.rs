@@ -12,9 +12,13 @@ use ordered_float::OrderedFloat;
 use prost_types::Timestamp;
 use rrule::Tz;
 use std::str::FromStr;
-use svc_storage_client_grpc::flight_plan::{Data as FlightPlanData, Object as FlightPlan};
-use svc_storage_client_grpc::vehicle::Object as Vehicle;
-use svc_storage_client_grpc::vertiport::Object as Vertiport;
+
+// Expose so svc-scheduler doesn't assume same svc-storage version
+pub use svc_storage_client_grpc::resources::flight_plan::{
+    Data as FlightPlanData, Object as FlightPlan,
+};
+pub use svc_storage_client_grpc::resources::vehicle::Object as Vehicle;
+pub use svc_storage_client_grpc::resources::vertiport::Object as Vertiport;
 
 /// Query struct for generating nodes near a location.
 #[derive(Debug, Copy, Clone)]
