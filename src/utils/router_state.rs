@@ -19,6 +19,7 @@ pub use svc_storage_client_grpc::resources::flight_plan::{
     Data as FlightPlanData, Object as FlightPlan,
 };
 pub use svc_storage_client_grpc::resources::vehicle::Object as Vehicle;
+pub use svc_storage_client_grpc::resources::vertipad::Object as Vertipad;
 pub use svc_storage_client_grpc::resources::vertiport::Object as Vertiport;
 
 /// Query struct for generating nodes near a location.
@@ -72,8 +73,6 @@ pub const AVG_SPEED_KMH: f32 = 60.0;
 pub const FLIGHT_PLAN_GAP_MINUTES: f32 = 5.0;
 /// Max amount of flight plans to return in case of large time window and multiple flights available
 pub const MAX_RETURNED_FLIGHT_PLANS: i64 = 10;
-/// Amount of vertipads per vertiport
-pub const VERTIPADS_PER_VERTIPORT: i64 = 1;
 
 /// Helper function to check if two time ranges overlap (touching ranges are not considered overlapping)
 /// All parameters are in seconds since epoch
@@ -182,12 +181,15 @@ pub fn is_vehicle_available(
 pub fn is_vertiport_available(
     vertiport_id: String,
     vertiport_schedule: Option<String>,
+    vertipads: &[Vertipad],
     date_from: DateTime<Tz>,
     existing_flight_plans: &[FlightPlan],
     is_departure_vertiport: bool,
 ) -> bool {
-    //todo add vertipad capacity check here as well. Basically vertiport should have
-    // max 2 loading/unloading vertipads and max 1 parked (or up to 3 parked)
+    let mut num_vertipads = vertipads.len();
+    if num_vertipads == 0 {
+        num_vertipads = 1
+    };
     let vertiport_schedule =
         Calendar::from_str(vertiport_schedule.as_ref().unwrap().as_str()).unwrap();
     let block_vertiport_minutes: i64 = if is_departure_vertiport {
@@ -260,15 +262,115 @@ pub fn is_vertiport_available(
             }
         })
         .count();
-    debug!(
+    info!(
         "Checking {} is departure: {}, is available for {} - {}? {}",
         vertiport_id,
         is_departure_vertiport,
         date_from,
         date_to,
-        conflicting_flight_plans_count == 0,
+        conflicting_flight_plans_count < num_vertipads,
     );
-    conflicting_flight_plans_count == 0
+    if num_vertipads > 1 {
+        let vehicles_at_vertiport =
+            get_all_vehicles_scheduled_for_vertiport(&vertiport_id, date_to, existing_flight_plans);
+        vehicles_at_vertiport.len() < num_vertipads
+    } else {
+        conflicting_flight_plans_count == 0
+    }
+}
+
+///Finds all vehicles which are parked at or in flight to the vertiport at specific timestamp
+/// Returns vector of tuples of (vehicle_id, minutes_to_arrival) where minutes_to_arrival is 0 if vehicle is parked at the vertiport
+pub fn get_all_vehicles_scheduled_for_vertiport(
+    vertiport_id: &str,
+    timestamp: DateTime<Tz>,
+    existing_flight_plans: &[FlightPlan],
+) -> Vec<(String, i64)> {
+    let mut vehicles_plans_sorted: HashMap<String, Vec<FlightPlan>> = HashMap::new();
+    existing_flight_plans
+        .iter()
+        .filter(|flight_plan| {
+            flight_plan
+                .data
+                .as_ref()
+                .unwrap()
+                .destination_vertiport_id
+                .as_ref()
+                .unwrap()
+                == vertiport_id
+                && flight_plan
+                    .data
+                    .as_ref()
+                    .unwrap()
+                    .scheduled_arrival
+                    .as_ref()
+                    .unwrap()
+                    .seconds // arrival time needs to be less than 2x time needed - to allow landing and and then take off again)
+                    < timestamp.timestamp() + LANDING_AND_UNLOADING_TIME_MIN as i64 * 60
+        })
+        .for_each(|flight_plan| {
+            if vehicles_plans_sorted.contains_key(&flight_plan.data.as_ref().unwrap().vehicle_id) {
+                vehicles_plans_sorted
+                    .get_mut(&flight_plan.data.as_ref().unwrap().vehicle_id)
+                    .unwrap()
+                    .push(flight_plan.clone());
+            } else {
+                vehicles_plans_sorted.insert(
+                    flight_plan.data.as_ref().unwrap().vehicle_id.clone(),
+                    vec![flight_plan.clone()],
+                );
+            }
+        });
+    //sort by scheduled arrival, latest first
+    vehicles_plans_sorted
+        .iter_mut()
+        .for_each(|(_, flight_plans)| {
+            flight_plans.sort_by(|a, b| {
+                b.data
+                    .as_ref()
+                    .unwrap()
+                    .scheduled_arrival
+                    .as_ref()
+                    .unwrap()
+                    .seconds
+                    .cmp(
+                        &a.data
+                            .as_ref()
+                            .unwrap()
+                            .scheduled_arrival
+                            .as_ref()
+                            .unwrap()
+                            .seconds,
+                    )
+            });
+        });
+    //return only the latest flight plan for each vehicle
+    let vehicles = vehicles_plans_sorted
+        .iter()
+        .map(|(vehicle_id, flight_plans)| {
+            let mut minutes_to_arrival = (flight_plans
+                .first()
+                .unwrap()
+                .data
+                .as_ref()
+                .unwrap()
+                .scheduled_arrival
+                .as_ref()
+                .unwrap()
+                .seconds
+                - timestamp.timestamp())
+                / 60;
+            if minutes_to_arrival < 0 {
+                minutes_to_arrival = 0;
+            }
+            (vehicle_id.clone(), minutes_to_arrival)
+        })
+        .collect();
+    debug!(
+        "Vehicles at vertiport: {} at a time: {} : {:?}",
+        &vertiport_id, timestamp, vehicles
+    );
+    vehicles
 }
 
 /// Gets vehicle location (vertiport_id) at given timestamp
@@ -394,14 +496,20 @@ pub fn get_all_flight_durations_to_vertiport(vertiport_id: &str) -> HashMap<&Nod
 /// * `aircrafts` - Aircrafts serving the route and vertiports
 /// # Returns
 /// A vector of flight plans
+#[allow(clippy::too_many_arguments)]
 pub fn get_possible_flights(
     vertiport_depart: Vertiport,
     vertiport_arrive: Vertiport,
+    vertipads_depart: Vec<Vertipad>,
+    vertipads_arrive: Vec<Vertipad>,
     earliest_departure_time: Option<Timestamp>,
     latest_arrival_time: Option<Timestamp>,
     vehicles: Vec<Vehicle>,
     existing_flight_plans: Vec<FlightPlan>,
 ) -> Result<Vec<(FlightPlanData, Vec<FlightPlanData>)>, String> {
+    info!("vertipads_depart: {:?}", vertipads_depart);
+    info!("vertipads_arrive: {:?}", vertipads_arrive);
+
     info!("Finding possible flights");
     if earliest_departure_time.is_none() || latest_arrival_time.is_none() {
         error!("Both earliest departure and latest arrival time must be specified");
@@ -486,6 +594,7 @@ pub fn get_possible_flights(
         let is_departure_vertiport_available = is_vertiport_available(
             vertiport_depart.id.clone(),
             vertiport_depart.data.as_ref().unwrap().schedule.clone(),
+            &vertipads_depart,
             departure_time,
             &existing_flight_plans,
             true,
@@ -493,6 +602,7 @@ pub fn get_possible_flights(
         let is_arrival_vertiport_available = is_vertiport_available(
             vertiport_arrive.id.clone(),
             vertiport_arrive.data.as_ref().unwrap().schedule.clone(),
+            &vertipads_arrive,
             arrival_time - Duration::minutes(LANDING_AND_UNLOADING_TIME_MIN as i64),
             &existing_flight_plans,
             false,
@@ -595,6 +705,7 @@ pub fn get_possible_flights(
                     let is_departure_vertiport_available = is_vertiport_available(
                         vertiport.uid.clone(),
                         vertiport.schedule.clone(),
+                        &vertipads_depart,
                         departure_time - Duration::minutes(n_duration),
                         &existing_flight_plans,
                         true,
@@ -602,6 +713,7 @@ pub fn get_possible_flights(
                     let is_arrival_vertiport_available = is_vertiport_available(
                         vertiport_depart.id.clone(),
                         vertiport_depart.data.as_ref().unwrap().schedule.clone(),
+                        &vertipads_arrive,
                         departure_time - Duration::minutes(LANDING_AND_UNLOADING_TIME_MIN as i64),
                         &existing_flight_plans,
                         false,
