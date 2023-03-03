@@ -169,7 +169,7 @@ pub mod engine {
             algorithm: Algorithm,
             heuristic_function: Option<fn(NodeIndex) -> f32>,
         ) -> (f32, Vec<NodeIndex>) {
-            info!(
+            debug!(
                 "Finding shortest path from {:?} to {:?} using algorithm {:?}",
                 from.location, to.location, algorithm
             );
