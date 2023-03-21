@@ -91,14 +91,12 @@ impl FromStr for Calendar {
             let duration = header_parts[1];
             let str = "DTSTART:".to_owned() + dtstart + "\n" + rrules.join("\n").as_str();
             let rrset_res = RRuleSet::from_str(&str);
-            if rrset_res.is_err() {
-                error!(
-                    "Invalid rrule set: {}",
-                    rrset_res.err().unwrap().to_string()
-                );
+
+            let Ok(rrule_set) = rrset_res else {
+                error!("Invalid rrule set: {:?}", rrset_res.unwrap_err());
                 return Err(());
-            }
-            let rrule_set = rrset_res.unwrap();
+            };
+
             recurrent_events.push(RecurrentEvent {
                 rrule_set,
                 duration: duration.to_string(),
