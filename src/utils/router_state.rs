@@ -124,23 +124,33 @@ pub fn is_vehicle_available(
     date_from: DateTime<Tz>,
     flight_duration_minutes: i64,
     existing_flight_plans: &[FlightPlan],
-) -> bool {
-    let vehicle_schedule = Calendar::from_str(
-        vehicle
-            .data
-            .as_ref()
-            .unwrap()
-            .schedule
-            .as_ref()
-            .unwrap()
-            .as_str(),
-    )
-    .unwrap();
+) -> Result<bool, String> {
+    let vehicle_data = vehicle.data.as_ref().unwrap();
+
+    // TODO R3: What's the default if a schedule isn't provided?
+    let Some(vehicle_schedule) = vehicle_data.schedule.as_ref() else {
+        return Ok(true);
+    };
+
+    let vehicle_schedule = vehicle_schedule.as_str();
+    let Ok(vehicle_schedule) = Calendar::from_str(vehicle_schedule) else {
+        debug!(
+            "Invalid schedule for vehicle {}: {}",
+            vehicle.id,
+            vehicle_schedule
+        );
+
+        return Err(
+            "Invalid schedule for vehicle.".to_string(),
+        );
+    };
+
     let date_to = date_from + Duration::minutes(flight_duration_minutes);
     //check if vehicle is available as per schedule
     if !vehicle_schedule.is_available_between(date_from, date_to) {
-        return false;
+        return Ok(false);
     }
+
     //check if vehicle is available as per existing flight plans
     let conflicting_flight_plans_count = existing_flight_plans
         .iter()
@@ -169,9 +179,10 @@ pub fn is_vehicle_available(
         })
         .count();
     if conflicting_flight_plans_count > 0 {
-        return false;
+        return Ok(false);
     }
-    true
+
+    Ok(true)
 }
 
 /// Checks if vertiport is available for a given time window from date_from to date_from + duration
@@ -552,12 +563,22 @@ pub fn find_deadhead_flight_plan(
                 );
                 continue;
             }
-            let is_vehicle_available = is_vehicle_available(
+
+            let result = is_vehicle_available(
                 vehicle,
                 departure_time - Duration::minutes(n_duration),
                 block_aircraft_and_vertiports_minutes,
                 existing_flight_plans,
             );
+
+            let Ok(is_vehicle_available) = result else {
+                debug!(
+                    "Unable to determine vehicle availability: (id {}) {}",
+                    &vehicle.id, result.err().unwrap()
+                );
+                continue;
+            };
+
             if !is_vehicle_available {
                 debug!(
                             "DH: Vehicle id:{} not available for departure time: {} and duration {} minutes",
@@ -836,12 +857,21 @@ pub fn get_possible_flights(
                 );
                 continue;
             }
-            let is_vehicle_available = is_vehicle_available(
+            let result = is_vehicle_available(
                 vehicle,
                 departure_time,
                 block_aircraft_and_vertiports_minutes as i64,
                 &existing_flight_plans,
             );
+
+            let Ok(is_vehicle_available) = result else {
+                debug!(
+                    "Could not determine vehicle availability: (id {}) {}",
+                    &vehicle.id, result.unwrap_err()
+                );
+                continue;
+            };
+
             if !is_vehicle_available {
                 debug!(
                     "Vehicle id:{} not available for departure time: {} and duration {} minutes",
@@ -1029,7 +1059,7 @@ pub fn is_router_initialized() -> bool {
 }
 
 /// Get route
-pub fn get_route(req: RouteQuery) -> Result<(Vec<Location>, f32), &'static str> {
+pub fn get_route(req: RouteQuery) -> Result<(Vec<Location>, f32), String> {
     debug!("Getting route");
     let RouteQuery {
         from,
@@ -1038,14 +1068,19 @@ pub fn get_route(req: RouteQuery) -> Result<(Vec<Location>, f32), &'static str> 
     } = req;
 
     if ARROW_CARGO_ROUTER.get().is_none() {
-        return Err("Arrow XL router not initialized. Try to initialize it first.");
+        return Err("Arrow XL router not initialized. Try to initialize it first.".to_string());
     }
-    let (cost, path) = ARROW_CARGO_ROUTER
+    let result = ARROW_CARGO_ROUTER
         .get()
         .as_ref()
         .ok_or("Can't access router")
         .unwrap()
         .find_shortest_path(from, to, Algorithm::Dijkstra, None);
+
+    let Ok((cost, path)) = result else {
+        return Err(format!("{:?}", result.unwrap_err()));
+    };
+
     debug!("cost: {}", cost);
     debug!("path: {:?}", path);
     let locations = path

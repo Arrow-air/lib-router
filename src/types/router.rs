@@ -168,37 +168,41 @@ pub mod engine {
             to: &Node,
             algorithm: Algorithm,
             heuristic_function: Option<fn(NodeIndex) -> f32>,
-        ) -> (f32, Vec<NodeIndex>) {
+        ) -> StdResult<(f32, Vec<NodeIndex>), RouterError> {
             debug!(
                 "Finding shortest path from {:?} to {:?} using algorithm {:?}",
                 from.location, to.location, algorithm
             );
-            if self.get_node_index(from).is_some() && self.get_node_index(to).is_some() {
-                let from_index = self.get_node_index(from).unwrap();
-                let to_index = self.get_node_index(to).unwrap();
-                match algorithm {
-                    Algorithm::Dijkstra => astar(
-                        &self.graph,
-                        from_index,
-                        |finish| finish == to_index,
-                        |e| (*e.weight()).into_inner(),
-                        heuristic_function.unwrap_or(|_| 0.0),
-                    )
-                    .unwrap_or((0.0, Vec::new())),
 
-                    Algorithm::AStar => astar(
-                        &self.graph,
-                        from_index,
-                        |finish| finish == to_index,
-                        |e| (*e.weight()).into_inner(),
-                        heuristic_function.unwrap_or(|_| 0.0),
-                    )
-                    .unwrap_or((0.0, Vec::new())),
-                }
-            } else {
-                warn!("Either the from or to node is not found.");
-                (-1.0, Vec::new())
-            }
+            let Some(from_index) = self.get_node_index(from) else {
+                return Err(RouterError::InvalidNodesInPath);
+            };
+
+            let Some(to_index) = self.get_node_index(to) else {
+                return Err(RouterError::InvalidNodesInPath);
+            };
+
+            let result = match algorithm {
+                Algorithm::Dijkstra => astar(
+                    &self.graph,
+                    from_index,
+                    |finish| finish == to_index,
+                    |e| (*e.weight()).into_inner(),
+                    heuristic_function.unwrap_or(|_| 0.0),
+                )
+                .unwrap_or((0.0, Vec::new())),
+
+                Algorithm::AStar => astar(
+                    &self.graph,
+                    from_index,
+                    |finish| finish == to_index,
+                    |e| (*e.weight()).into_inner(),
+                    heuristic_function.unwrap_or(|_| 0.0),
+                )
+                .unwrap_or((0.0, Vec::new())),
+            };
+
+            Ok(result)
         }
 
         /// Compute the total Haversine distance of a path.
@@ -220,13 +224,17 @@ pub mod engine {
                 let node_from = self.get_node_by_id(path[i]);
                 let node_to = self.get_node_by_id(path[i + 1]);
 
-                if node_from.is_none() || node_to.is_none() {
-                    error!("Either the from or to node is not found.");
+                let Some(node_from) = node_from else {
+                    error!("'From' node is not found.");
                     return Err(RouterError::InvalidNodesInPath);
-                }
+                };
 
-                total_distance +=
-                    haversine::distance(&node_from.unwrap().location, &node_to.unwrap().location);
+                let Some(node_to) = node_to else {
+                    error!("'To' node is not found.");
+                    return Err(RouterError::InvalidNodesInPath);
+                };
+
+                total_distance += haversine::distance(&node_from.location, &node_to.location);
             }
             debug!("Total distance: {}", total_distance);
             Ok(total_distance)
@@ -299,7 +307,11 @@ mod router_tests {
         let from = &nodes[0];
         let to = &nodes[1];
 
-        let (cost, path) = router.find_shortest_path(from, to, Algorithm::AStar, None);
+        let result = router.find_shortest_path(from, to, Algorithm::AStar, None);
+
+        let Ok((cost, path)) = result else {
+            panic!("Could not find shortest path: {:?}", result.unwrap_err());
+        };
 
         assert_eq!(cost, 0.0);
         assert_eq!(router.get_edge_count(), 0);
@@ -382,20 +394,28 @@ mod router_tests {
             router.get_edge_count()
         );
 
-        let (cost, path) = router.find_shortest_path(&nodes[0], &nodes[2], Algorithm::AStar, None);
+        let result = router.find_shortest_path(&nodes[0], &nodes[2], Algorithm::AStar, None);
+
+        let Ok((cost, path)) = result else {
+            panic!("Could not find shortest path: {:?}", result.unwrap_err());
+        };
+
         assert_eq!(
             cost,
             haversine::distance(&nodes[0].location, &nodes[2].location)
         );
         // should be 1 -> 3
         assert_eq!(path.len(), 2);
-        assert_eq!(
-            path,
-            vec![
-                router.get_node_index(&nodes[0]).unwrap(),
-                router.get_node_index(&nodes[2]).unwrap()
-            ]
-        );
+
+        let Some(node_0) = router.get_node_index(&nodes[0]) else {
+            panic!("Could not find nodes[0]");
+        };
+
+        let Some(node_2) = router.get_node_index(&nodes[2]) else {
+            panic!("Could not find nodes[2]");
+        };
+
+        assert_eq!(path, vec![node_0, node_2]);
     }
 
     /// Find the shortest path between a point in San Francisco and a
@@ -476,7 +496,12 @@ mod router_tests {
             router.get_edge_count()
         );
 
-        let (cost, path) = router.find_shortest_path(&nodes[0], &nodes[3], Algorithm::AStar, None);
+        let result = router.find_shortest_path(&nodes[0], &nodes[3], Algorithm::AStar, None);
+
+        let Ok((cost, path)) = result else {
+            panic!("Could not find shortest path: {:?}", result.unwrap_err());
+        };
+
         assert_eq!(cost, 0.0);
         // should be 0
         assert_eq!(path.len(), 0);
@@ -552,11 +577,12 @@ mod router_tests {
             |from, to| haversine::distance(&from.as_node().location, &to.as_node().location),
         );
 
-        let (cost, path) =
+        let result =
             router.find_shortest_path(&nodes[0], &not_in_graph_node, Algorithm::AStar, None);
 
-        assert_eq!(cost, -1.0);
-        assert_eq!(path.len(), 0);
+        let Err(_) = result else {
+            panic!("This was a valid path, expected invalid path.");
+        };
     }
 
     /// Test get_edges
@@ -634,10 +660,17 @@ mod router_tests {
             |from, to| haversine::distance(&from.as_node().location, &to.as_node().location),
         );
 
-        let (cost, mut path) =
-            router.find_shortest_path(&nodes[0], &nodes[99], Algorithm::AStar, None);
-        assert_eq!(router.get_total_distance(&path).is_ok(), true);
-        assert_eq!(router.get_total_distance(&path).unwrap(), cost);
+        let result = router.find_shortest_path(&nodes[0], &nodes[99], Algorithm::AStar, None);
+
+        let Ok((cost, mut path)) = result else {
+            panic!("Could not find shortest path: {:?}", result.unwrap_err());
+        };
+
+        let result = router.get_total_distance(&path);
+        let Ok(actual_cost) = result else {
+            panic!("Could not get total distance: {:?}", result.unwrap_err());
+        };
+        assert_eq!(actual_cost, cost);
 
         let mut invalid_path: Vec<petgraph::stable_graph::NodeIndex> =
             vec![petgraph::stable_graph::NodeIndex::new(300)];
