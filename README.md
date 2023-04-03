@@ -1,7 +1,8 @@
 ![Arrow Banner](https://github.com/Arrow-air/.github/raw/main/profile/assets/arrow_v2_twitter-banner_neu.png)
 
-# Arrow Router Library
+# Arrow Router Library (Decommissioned)
 
+## :warning: **This library is no longer under maintenance. The library has been integrated into [svc-scheduler](https://github.com/Arrow-air/svc-scheduler), further changes/features will be done as a part of `svc-scheduler`'s development. You are still welcome to use this library on a standalone basis.**
 
 
 ![Rust
